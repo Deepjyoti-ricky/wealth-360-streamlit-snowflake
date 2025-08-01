@@ -1,0 +1,201 @@
+# Semantic Model for Stock Price Time Series Data
+# Based on Cybersyn Financial & Economic Essentials Dataset
+
+model_name: stock_price_timeseries
+description: "Daily stock price and trading metrics for publicly traded companies"
+version: "1.0"
+
+# Data source configuration
+data_source:
+  type: "table"
+  name: "stock_price_timeseries"
+  description: "Time series data containing daily stock prices and trading metrics"
+
+# Dimensions (categorical/grouping attributes)
+dimensions:
+  ticker:
+    type: "string"
+    description: "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+    examples: ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "GOOG", "SNOW"]
+    primary_key: false
+    
+  date:
+    type: "date"
+    description: "Trading date for the stock data"
+    format: "YYYY-MM-DD"
+    primary_key: false
+    time_dimension: true
+    
+  primary_exchange_code:
+    type: "string" 
+    description: "Primary exchange code where the stock is listed"
+    examples: ["NYS", "NAS", "ASE"]
+    mapping:
+      "NYS": "New York Stock Exchange"
+      "NAS": "NASDAQ"
+      "ASE": "American Stock Exchange"
+    
+  variable_name:
+    type: "string"
+    description: "Type of stock price/trading metric"
+    examples: 
+      - "Pre-Market Open"
+      - "Post-Market Close" 
+      - "All-Day Low"
+      - "All-Day High"
+      - "Nasdaq Volume"
+      - "Close"
+      - "Open"
+      - "Volume"
+    
+  company_name:
+    type: "string"
+    description: "Full company name corresponding to the ticker"
+    examples: ["Apple Inc.", "Microsoft Corporation", "Alphabet Inc.", "Amazon.com Inc."]
+
+# Measures (numeric/aggregatable values)
+measures:
+  value:
+    type: "float"
+    description: "The actual price or volume value for the given metric"
+    unit: "USD or shares"
+    aggregations: ["sum", "avg", "min", "max", "count"]
+    
+  nasdaq_volume:
+    type: "integer"
+    description: "Trading volume on NASDAQ exchange"
+    unit: "shares"
+    aggregations: ["sum", "avg", "min", "max"]
+    
+  postmarket_close:
+    type: "float"
+    description: "Post-market closing price"
+    unit: "USD"
+    aggregations: ["avg", "min", "max"]
+    
+  day_over_day_change:
+    type: "float"
+    description: "Day-over-day percentage change in closing price"
+    unit: "percentage"
+    calculation: "(current_close - previous_close) / previous_close"
+    aggregations: ["avg", "min", "max"]
+
+# Calculated fields
+calculated_fields:
+  price_change_abs:
+    formula: "ABS(day_over_day_change)"
+    description: "Absolute value of day-over-day price change"
+    type: "float"
+    
+  quarterly_low:
+    formula: "MIN(value) OVER (PARTITION BY ticker ORDER BY date ROWS BETWEEN 90 PRECEDING AND CURRENT ROW)"
+    description: "Quarterly rolling minimum price"
+    type: "float"
+    
+  market_cap_category:
+    formula: |
+      CASE 
+        WHEN ticker IN ('AAPL', 'MSFT', 'GOOGL', 'AMZN') THEN 'Large Cap'
+        WHEN ticker IN ('TSLA', 'META', 'NVDA') THEN 'Medium Cap' 
+        ELSE 'Small Cap'
+      END
+    description: "Market capitalization category"
+    type: "string"
+
+# Relationships
+relationships:
+  - type: "one_to_many"
+    from: "ticker"
+    to: "date"
+    description: "Each ticker has many daily records"
+    
+  - type: "many_to_one" 
+    from: "ticker"
+    to: "primary_exchange_code"
+    description: "Multiple tickers can trade on the same exchange"
+
+# Filters and constraints
+filters:
+  default_date_range:
+    field: "date"
+    type: "date_range"
+    default: "last_30_days"
+    
+  popular_tickers:
+    field: "ticker"
+    type: "inclusion"
+    values: ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA"]
+    
+  trading_days_only:
+    field: "date"
+    type: "exclusion"
+    description: "Exclude weekends and holidays"
+
+# Data quality rules
+data_quality:
+  completeness:
+    - field: "ticker"
+      rule: "NOT NULL"
+    - field: "date" 
+      rule: "NOT NULL"
+    - field: "value"
+      rule: "NOT NULL AND value >= 0"
+      
+  validity:
+    - field: "date"
+      rule: "date >= '1990-01-01' AND date <= CURRENT_DATE"
+    - field: "value"
+      rule: "value BETWEEN 0 AND 1000000"
+      
+  consistency:
+    - rule: "Each ticker-date-variable_name combination should be unique"
+      fields: ["ticker", "date", "variable_name"]
+
+# Usage patterns
+common_queries:
+  daily_stock_performance:
+    description: "Get daily closing prices for selected stocks"
+    dimensions: ["ticker", "date"]
+    measures: ["postmarket_close", "day_over_day_change"]
+    filters: ["popular_tickers", "default_date_range"]
+    
+  volume_analysis:
+    description: "Analyze trading volume patterns"
+    dimensions: ["ticker", "date", "primary_exchange_code"]
+    measures: ["nasdaq_volume"]
+    
+  price_volatility:
+    description: "Track price volatility over time"
+    dimensions: ["ticker", "date"]
+    measures: ["day_over_day_change"]
+    calculated_fields: ["price_change_abs"]
+
+# Visualization recommendations
+visualizations:
+  time_series:
+    chart_type: "line"
+    x_axis: "date"
+    y_axis: ["postmarket_close", "day_over_day_change"]
+    color_by: "ticker"
+    
+  volume_heatmap:
+    chart_type: "heatmap"
+    x_axis: "date"
+    y_axis: "ticker"
+    value: "nasdaq_volume"
+    
+  performance_comparison:
+    chart_type: "bar"
+    x_axis: "ticker"
+    y_axis: "day_over_day_change"
+    aggregation: "avg"
+
+# Metadata
+metadata:
+  created_by: "Data Engineering Team"
+  created_date: "2024-01-20"
+  last_updated: "2024-01-20"
+  tags: ["finance", "stocks", "timeseries", "trading"]
+  data_classification: "public"
+  refresh_frequency: "daily"
+  data_retention: "10_years"
