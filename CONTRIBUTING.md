@@ -57,3 +57,12 @@ Use conventional commit format:
 ## Questions?
 
 Open an issue for questions or discussion before starting major changes.
+
+## Contact
+
+For direct questions or collaboration opportunities:
+
+**Deepjyoti Dev**
+Senior Data Cloud Architect, Snowflake GXC Team
+📧 deepjyoti.dev@snowflake.com
+📱 +917205672310

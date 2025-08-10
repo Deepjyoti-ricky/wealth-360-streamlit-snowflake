@@ -4,7 +4,8 @@ Wealth 360 Analytics - Professional BFSI Streamlit Application
 This application provides comprehensive analytics for Banking, Financial Services,
 and Insurance (BFSI) use cases using Snowflake's wealth management dataset.
 
-Author: BFSI Analytics Team
+Author: Deepjyoti Dev, Senior Data Cloud Architect, Snowflake GXC Team
+Contact: deepjyoti.dev@snowflake.com | +917205672310
 Version: 1.0.0
 License: MIT
 """

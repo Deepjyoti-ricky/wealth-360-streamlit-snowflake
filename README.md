@@ -160,6 +160,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 💡 [Feature Requests](https://github.com/Deepjyoti-ricky/wealth-360-streamlit-snowflake/issues/new?template=feature_request.md)
 - 🤝 [Contributing Guidelines](CONTRIBUTING.md)
 
+## 👤 Author
+
+**Deepjyoti Dev**
+Senior Data Cloud Architect, Snowflake GXC Team
+📧 deepjyoti.dev@snowflake.com
+📱 +917205672310
+
 ---
 
 **Built with ❤️ for the BFSI community using Snowflake and Streamlit**
