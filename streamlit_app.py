@@ -1,19 +1,48 @@
+"""
+Wealth 360 Analytics - Professional BFSI Streamlit Application
+
+This application provides comprehensive analytics for Banking, Financial Services,
+and Insurance (BFSI) use cases using Snowflake's wealth management dataset.
+
+Author: BFSI Analytics Team
+Version: 1.0.0
+License: MIT
+"""
+
+import logging
 import os
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import pandas as pd
-import streamlit as st
 import plotly.express as px
+import streamlit as st
 from snowflake.snowpark import Session
 from snowflake.snowpark.context import get_active_session
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 # -----------------------------
 # Configuration and Connection (Snowpark-first for Streamlit in Snowflake)
 # -----------------------------
 
+
 def _read_secrets_prefixed(prefix: str) -> Dict[str, Optional[str]]:
+    """
+    Read configuration secrets with a given prefix.
+
+    Args:
+        prefix: Configuration section prefix (e.g., 'SNOWFLAKE')
+
+    Returns:
+        Dictionary of configuration values
+    """
     values: Dict[str, Optional[str]] = {}
+
     # Prefer Streamlit secrets if available, fall back to environment variables
     def get_val(key: str) -> Optional[str]:
         if "secrets" in st.__dict__:
@@ -41,37 +70,57 @@ def _read_secrets_prefixed(prefix: str) -> Dict[str, Optional[str]]:
 
 @st.cache_resource(show_spinner=False)
 def get_snowflake_session() -> Session:
+    """
+    Get Snowflake session - prioritizes active session in Streamlit in Snowflake,
+    falls back to credentials-based session for local development.
+
+    Returns:
+        Snowflake Snowpark Session object
+
+    Raises:
+        RuntimeError: If session cannot be established
+    """
     # 1) If running inside Streamlit in Snowflake, use the active session
     try:
         sess = get_active_session()
         if sess is not None:
+            logger.info("Using active Snowflake session from Streamlit in Snowflake")
             # Optionally align db/schema from secrets if provided
             cfg = _read_secrets_prefixed("SNOWFLAKE")
             try:
                 if cfg.get("DATABASE"):
                     sess.use_database(cfg["DATABASE"])
+                    logger.info(f"Switched to database: {cfg['DATABASE']}")
                 if cfg.get("SCHEMA"):
                     sess.use_schema(cfg["SCHEMA"])
+                    logger.info(f"Switched to schema: {cfg['SCHEMA']}")
                 if cfg.get("WAREHOUSE"):
                     sess.use_warehouse(cfg["WAREHOUSE"])
+                    logger.info(f"Switched to warehouse: {cfg['WAREHOUSE']}")
                 if cfg.get("ROLE"):
                     sess.use_role(cfg["ROLE"])
-            except Exception:
+                    logger.info(f"Switched to role: {cfg['ROLE']}")
+            except Exception as e:
+                logger.warning(f"Could not change context: {e}")
                 # Ignore if not permitted to change context
                 pass
             return sess
-    except Exception:
-        pass
+    except Exception as e:
+        logger.info(f"Active session not available: {e}")
 
     # 2) Local/dev fallback via secrets (requires full creds)
+    logger.info("Attempting local session with credentials")
     cfg = _read_secrets_prefixed("SNOWFLAKE")
     required = ["USER", "PASSWORD", "ACCOUNT", "WAREHOUSE", "DATABASE", "SCHEMA"]
     missing = [k for k in required if not cfg.get(k)]
     if missing:
-        raise RuntimeError(
+        error_msg = (
             "Snowflake session not available and missing local secrets: "
             + ", ".join(missing)
         )
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+
     connection_parameters = {
         "account": cfg["ACCOUNT"],
         "user": cfg["USER"],
@@ -82,20 +131,53 @@ def get_snowflake_session() -> Session:
     }
     if cfg.get("ROLE"):
         connection_parameters["role"] = cfg["ROLE"]
+
+    logger.info(f"Creating session for account: {cfg['ACCOUNT']}")
     return Session.builder.configs(connection_parameters).create()
 
 
 @st.cache_data(ttl=600, show_spinner=False)
 def run_query(sql: str) -> pd.DataFrame:
-    session = get_snowflake_session()
-    return session.sql(sql).to_pandas()
+    """
+    Execute SQL query and return results as pandas DataFrame.
+
+    Args:
+        sql: SQL query string to execute
+
+    Returns:
+        pandas DataFrame with query results
+
+    Raises:
+        Exception: If query execution fails
+    """
+    try:
+        session = get_snowflake_session()
+        logger.debug(f"Executing query: {sql[:100]}...")
+        result = session.sql(sql).to_pandas()
+        logger.info(f"Query returned {len(result)} rows")
+        return result
+    except Exception as e:
+        logger.error(f"Query execution failed: {e}")
+        st.error(f"Database query failed: {str(e)}")
+        return pd.DataFrame()  # Return empty DataFrame on error
 
 
 # -----------------------------
 # Reusable Query Helpers
 # -----------------------------
 
-def get_global_kpis() -> Dict[str, Optional[float]]:
+
+def get_global_kpis() -> Dict[str, Any]:
+    """
+    Calculate firm-level KPIs including client count, advisor count, AUM, and YTD growth.
+
+    Returns:
+        Dictionary containing:
+        - num_clients: Total number of clients
+        - num_advisors: Total number of advisors
+        - aum: Assets under management (latest snapshot)
+        - ytd_growth_pct: Year-to-date growth percentage
+    """
     # Clients
     clients_df = run_query("SELECT COUNT(DISTINCT CLIENT_ID) AS CNT FROM CLIENTS")
     num_clients = int(clients_df.loc[0, "CNT"]) if not clients_df.empty else 0
@@ -156,7 +238,9 @@ def get_global_kpis() -> Dict[str, Optional[float]]:
         JOIN start_of_year_value AS s ON (l.JOIN_ID = s.JOIN_ID)
     """
     ytd_df = run_query(ytd_sql)
-    ytd_growth_pct = float(ytd_df.loc[0, "YTD_GROWTH_PCT"]) if not ytd_df.empty else None
+    ytd_growth_pct = (
+        float(ytd_df.loc[0, "YTD_GROWTH_PCT"]) if not ytd_df.empty else None
+    )
 
     return {
         "num_clients": num_clients,
@@ -166,7 +250,19 @@ def get_global_kpis() -> Dict[str, Optional[float]]:
     }
 
 
-def get_hnw_low_engagement(threshold_days: int = 180, net_worth_threshold: int = 1_000_000) -> pd.DataFrame:
+def get_hnw_low_engagement(
+    threshold_days: int = 180, net_worth_threshold: int = 1_000_000
+) -> pd.DataFrame:
+    """
+    Identify high net worth clients with low recent engagement.
+
+    Args:
+        threshold_days: Days since last interaction to consider "low engagement"
+        net_worth_threshold: Minimum net worth to qualify as "high net worth"
+
+    Returns:
+        DataFrame with client details and last interaction dates
+    """
     sql = f"""
         WITH last_interaction AS (
             SELECT i.CLIENT_ID, MAX(i.TIMESTAMP) AS LAST_INTERACTION_DATE
@@ -315,6 +411,7 @@ def get_suitability_mismatches() -> pd.DataFrame:
         "Growth": {"Growth", "Aggressive Growth"},
         "Aggressive Growth": {"Aggressive Growth"},
     }
+
     def is_mismatch(row) -> bool:
         risk = row.get("RISK_TOLERANCE") or ""
         strat = row.get("STRATEGY_TYPE") or ""
@@ -430,22 +527,41 @@ with st.sidebar:
 
     st.divider()
     st.subheader("Filters")
-    hnw_threshold = st.number_input("HNW Threshold (USD)", min_value=100000, value=1_000_000, step=100000)
-    low_engagement_days = st.slider("Low Engagement if last touch older than (days)", min_value=30, max_value=365, value=180, step=15)
-    advisor_window_days = st.slider("Advisor activity window (days)", min_value=30, max_value=365, value=90, step=15)
-    interactions_window_days = st.slider("Engagement window (days)", min_value=30, max_value=1095, value=365, step=30)
-    concentration_threshold = st.slider("Concentration threshold (%)", min_value=5, max_value=80, value=30, step=5) / 100.0
+    hnw_threshold = st.number_input(
+        "HNW Threshold (USD)", min_value=100000, value=1_000_000, step=100000
+    )
+    low_engagement_days = st.slider(
+        "Low Engagement if last touch older than (days)",
+        min_value=30,
+        max_value=365,
+        value=180,
+        step=15,
+    )
+    advisor_window_days = st.slider(
+        "Advisor activity window (days)", min_value=30, max_value=365, value=90, step=15
+    )
+    interactions_window_days = st.slider(
+        "Engagement window (days)", min_value=30, max_value=1095, value=365, step=30
+    )
+    concentration_threshold = (
+        st.slider(
+            "Concentration threshold (%)", min_value=5, max_value=80, value=30, step=5
+        )
+        / 100.0
+    )
 
 
-tabs = st.tabs([
-    "Overview",
-    "HNW Retention",
-    "Advisor Productivity",
-    "Portfolio Performance",
-    "Compliance & Risk",
-    "Market Events Impact",
-    "Digital Engagement",
-])
+tabs = st.tabs(
+    [
+        "Overview",
+        "HNW Retention",
+        "Advisor Productivity",
+        "Portfolio Performance",
+        "Compliance & Risk",
+        "Market Events Impact",
+        "Digital Engagement",
+    ]
+)
 
 
 # Overview
@@ -474,7 +590,9 @@ with tabs[0]:
 # HNW Retention
 with tabs[1]:
     st.subheader("High Net Worth – Low Engagement Clients")
-    hnw_df = get_hnw_low_engagement(threshold_days=low_engagement_days, net_worth_threshold=int(hnw_threshold))
+    hnw_df = get_hnw_low_engagement(
+        threshold_days=low_engagement_days, net_worth_threshold=int(hnw_threshold)
+    )
     if hnw_df.empty:
         st.success("No HNW clients currently flagged for low engagement.")
     else:
@@ -487,7 +605,13 @@ with tabs[2]:
     adv_df = get_advisor_productivity(window_days=advisor_window_days)
     if not adv_df.empty:
         st.dataframe(adv_df, use_container_width=True)
-        fig = px.bar(adv_df, x="ADVISOR_NAME", y="TOTAL_AUM", title="AUM by Advisor", text_auto=True)
+        fig = px.bar(
+            adv_df,
+            x="ADVISOR_NAME",
+            y="TOTAL_AUM",
+            title="AUM by Advisor",
+            text_auto=True,
+        )
         fig.update_layout(xaxis_title="Advisor", yaxis_title="Total AUM (USD)")
         st.plotly_chart(fig, use_container_width=True)
     else:
@@ -507,7 +631,12 @@ with tabs[3]:
     st.subheader("Allocation – Latest Snapshot")
     alloc_df = get_asset_allocation_latest()
     if not alloc_df.empty:
-        fig2 = px.bar(alloc_df, x="ASSET_CLASS", y="TOTAL_VALUE", title="Allocation by Asset Class")
+        fig2 = px.bar(
+            alloc_df,
+            x="ASSET_CLASS",
+            y="TOTAL_VALUE",
+            title="Allocation by Asset Class",
+        )
         st.plotly_chart(fig2, use_container_width=True)
     else:
         st.info("No allocation data available.")
@@ -520,7 +649,19 @@ with tabs[4]:
     if mism.empty:
         st.success("No suitability mismatches detected.")
     else:
-        st.dataframe(mism[["CLIENT_ID", "FIRST_NAME", "LAST_NAME", "RISK_TOLERANCE", "PORTFOLIO_ID", "STRATEGY_TYPE"]], use_container_width=True)
+        st.dataframe(
+            mism[
+                [
+                    "CLIENT_ID",
+                    "FIRST_NAME",
+                    "LAST_NAME",
+                    "RISK_TOLERANCE",
+                    "PORTFOLIO_ID",
+                    "STRATEGY_TYPE",
+                ]
+            ],
+            use_container_width=True,
+        )
 
     st.divider()
     st.subheader("Concentration Breaches")
@@ -541,7 +682,9 @@ with tabs[5]:
         st.info("No market event impact data available.")
     else:
         st.dataframe(me, use_container_width=True)
-        fig = px.bar(me, x="EVENT_NAME", y="CHANGE_PCT", title="AUM % Change by Market Event")
+        fig = px.bar(
+            me, x="EVENT_NAME", y="CHANGE_PCT", title="AUM % Change by Market Event"
+        )
         st.plotly_chart(fig, use_container_width=True)
 
 
@@ -550,16 +693,21 @@ with tabs[6]:
     st.subheader("Engagement by Channel and Type")
     sums = get_interactions_summary(window_days=interactions_window_days)
     if not sums["by_channel"].empty:
-        fig = px.bar(sums["by_channel"], x="CHANNEL", y="CNT", title="Interactions by Channel")
+        fig = px.bar(
+            sums["by_channel"], x="CHANNEL", y="CNT", title="Interactions by Channel"
+        )
         st.plotly_chart(fig, use_container_width=True)
     if not sums["by_type"].empty:
-        fig2 = px.bar(sums["by_type"], x="INTERACTION_TYPE", y="CNT", title="Interactions by Type")
+        fig2 = px.bar(
+            sums["by_type"], x="INTERACTION_TYPE", y="CNT", title="Interactions by Type"
+        )
         st.plotly_chart(fig2, use_container_width=True)
     if not sums["complaints"].empty:
-        fig3 = px.line(sums["complaints"], x="MONTH", y="COMPLAINTS", title="Complaints Over Time")
+        fig3 = px.line(
+            sums["complaints"], x="MONTH", y="COMPLAINTS", title="Complaints Over Time"
+        )
         st.plotly_chart(fig3, use_container_width=True)
 
     st.divider()
     st.subheader("Top Clients by Interactions")
     st.dataframe(sums["top_clients"], use_container_width=True)
-
