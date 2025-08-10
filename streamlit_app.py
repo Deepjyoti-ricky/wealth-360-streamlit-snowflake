@@ -1263,6 +1263,263 @@ def get_advisor_territory_coverage() -> pd.DataFrame:
     return run_query(sql)
 
 
+def get_client_location_details() -> pd.DataFrame:
+    """Get client locations with coordinates for mapbox visualization"""
+
+    sql = """
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        state_coordinates AS (
+            SELECT 'AL' AS STATE, 32.806671 AS LATITUDE, -86.791130 AS LONGITUDE
+            UNION ALL SELECT 'AK', 61.570716, -152.404419
+            UNION ALL SELECT 'AZ', 33.729759, -111.431221
+            UNION ALL SELECT 'AR', 34.969704, -92.373123
+            UNION ALL SELECT 'CA', 36.116203, -119.681564
+            UNION ALL SELECT 'CO', 39.059811, -105.311104
+            UNION ALL SELECT 'CT', 41.767, -72.677
+            UNION ALL SELECT 'DE', 39.161921, -75.526755
+            UNION ALL SELECT 'FL', 27.4518, -81.5158
+            UNION ALL SELECT 'GA', 32.9866, -83.6487
+            UNION ALL SELECT 'HI', 21.1098, -157.5311
+            UNION ALL SELECT 'ID', 44.931109, -116.237651
+            UNION ALL SELECT 'IL', 40.349457, -88.986137
+            UNION ALL SELECT 'IN', 39.790942, -86.147685
+            UNION ALL SELECT 'IA', 42.011539, -93.210526
+            UNION ALL SELECT 'KS', 38.572954, -98.580009
+            UNION ALL SELECT 'KY', 37.669773, -84.670067
+            UNION ALL SELECT 'LA', 31.266683, -91.988312
+            UNION ALL SELECT 'ME', 45.367584, -68.972168
+            UNION ALL SELECT 'MD', 39.161921, -75.526755
+            UNION ALL SELECT 'MA', 42.2352, -71.0275
+            UNION ALL SELECT 'MI', 43.354558, -84.955255
+            UNION ALL SELECT 'MN', 45.7326, -93.9196
+            UNION ALL SELECT 'MS', 32.7673, -89.6812
+            UNION ALL SELECT 'MO', 38.572954, -92.189283
+            UNION ALL SELECT 'MT', 47.052632, -110.454353
+            UNION ALL SELECT 'NE', 41.590939, -99.675285
+            UNION ALL SELECT 'NV', 39.161921, -117.055374
+            UNION ALL SELECT 'NH', 43.452492, -71.563896
+            UNION ALL SELECT 'NJ', 40.221741, -74.756138
+            UNION ALL SELECT 'NM', 34.307144, -106.018066
+            UNION ALL SELECT 'NY', 42.659829, -75.615011
+            UNION ALL SELECT 'NC', 35.771, -78.638
+            UNION ALL SELECT 'ND', 47.259, -99.955
+            UNION ALL SELECT 'OH', 40.269789, -82.955255
+            UNION ALL SELECT 'OK', 35.482309, -97.534994
+            UNION ALL SELECT 'OR', 44.931109, -123.029159
+            UNION ALL SELECT 'PA', 40.269789, -77.727883
+            UNION ALL SELECT 'RI', 41.82355, -71.422132
+            UNION ALL SELECT 'SC', 33.836082, -81.163727
+            UNION ALL SELECT 'SD', 44.268543, -99.672985
+            UNION ALL SELECT 'TN', 35.771, -86.25
+            UNION ALL SELECT 'TX', 31.106, -97.6475
+            UNION ALL SELECT 'UT', 39.161921, -111.431221
+            UNION ALL SELECT 'VT', 44.26639, -72.580536
+            UNION ALL SELECT 'VA', 37.54, -78.64
+            UNION ALL SELECT 'WA', 47.042418, -122.893077
+            UNION ALL SELECT 'WV', 38.349497, -81.633294
+            UNION ALL SELECT 'WI', 44.95, -89.5
+            UNION ALL SELECT 'WY', 42.7475, -107.2085
+            UNION ALL SELECT 'AS', -14.270972, -170.132217  -- American Samoa
+            UNION ALL SELECT 'VI', 18.335765, -64.896335    -- Virgin Islands
+            UNION ALL SELECT 'PW', 7.51498, 134.58252       -- Palau
+        )
+        SELECT c.CLIENT_ID,
+               c.FIRST_NAME || ' ' || c.LAST_NAME AS CLIENT_NAME,
+               c.CITY, c.STATE, c.ZIP_CODE,
+               c.NET_WORTH_ESTIMATE, c.RISK_TOLERANCE,
+               COALESCE(cpv.TOTAL_PORTFOLIO_VALUE, 0) AS PORTFOLIO_VALUE,
+               -- Add small random offset to avoid overlapping points
+               sc.LATITUDE + (RANDOM() * 0.5 - 0.25) AS LATITUDE,
+               sc.LONGITUDE + (RANDOM() * 0.5 - 0.25) AS LONGITUDE
+        FROM CLIENTS c
+        LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
+        LEFT JOIN state_coordinates sc ON c.STATE = sc.STATE
+        WHERE c.STATE IS NOT NULL AND sc.LATITUDE IS NOT NULL
+        LIMIT 1000  -- Limit for performance on map visualization
+    """
+    return run_query(sql)
+
+
+def get_advisor_location_details() -> pd.DataFrame:
+    """Get advisor locations with coordinates for mapbox visualization"""
+
+    sql = """
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        advisor_metrics AS (
+            SELECT a.ADVISOR_ID, a.NAME AS ADVISOR_NAME, a.SPECIALIZATION, a.REGION,
+                   COUNT(DISTINCT acr.CLIENT_ID) AS TOTAL_CLIENTS,
+                   COALESCE(SUM(cpv.TOTAL_PORTFOLIO_VALUE), 0) AS TOTAL_AUM,
+                   -- Estimate coverage type based on region
+                   CASE
+                       WHEN a.REGION IN ('California', 'Texas', 'Florida', 'New York') THEN 'Regional Coverage'
+                       WHEN a.REGION IN ('Michigan', 'Arizona', 'Indiana', 'Mississippi') THEN 'State Coverage'
+                       ELSE 'Local Coverage'
+                   END AS COVERAGE_TYPE
+            FROM ADVISORS a
+            LEFT JOIN ADVISOR_CLIENT_RELATIONSHIPS acr ON a.ADVISOR_ID = acr.ADVISOR_ID
+            LEFT JOIN client_portfolio_values cpv ON acr.CLIENT_ID = cpv.CLIENT_ID
+            GROUP BY 1, 2, 3, 4
+        ),
+        region_coordinates AS (
+            SELECT 'California' AS REGION, 36.116203 AS LATITUDE, -119.681564 AS LONGITUDE
+            UNION ALL SELECT 'Texas', 31.106, -97.6475
+            UNION ALL SELECT 'Florida', 27.4518, -81.5158
+            UNION ALL SELECT 'New York', 42.659829, -75.615011
+            UNION ALL SELECT 'Michigan', 43.354558, -84.955255
+            UNION ALL SELECT 'Arizona', 33.729759, -111.431221
+            UNION ALL SELECT 'Indiana', 39.790942, -86.147685
+            UNION ALL SELECT 'Mississippi', 32.7673, -89.6812
+            UNION ALL SELECT 'Illinois', 40.349457, -88.986137
+            UNION ALL SELECT 'Georgia', 32.9866, -83.6487
+            UNION ALL SELECT 'North Carolina', 35.771, -78.638
+            UNION ALL SELECT 'Ohio', 40.269789, -82.955255
+            UNION ALL SELECT 'Pennsylvania', 40.269789, -77.727883
+            UNION ALL SELECT 'Virginia', 37.54, -78.64
+            UNION ALL SELECT 'Washington', 47.042418, -122.893077
+            UNION ALL SELECT 'Colorado', 39.059811, -105.311104
+            UNION ALL SELECT 'Oregon', 44.931109, -123.029159
+            UNION ALL SELECT 'Nevada', 39.161921, -117.055374
+            UNION ALL SELECT 'Utah', 39.161921, -111.431221
+            UNION ALL SELECT 'Connecticut', 41.767, -72.677
+            UNION ALL SELECT 'Massachusetts', 42.2352, -71.0275
+            UNION ALL SELECT 'New Jersey', 40.221741, -74.756138
+            UNION ALL SELECT 'Maryland', 39.161921, -75.526755
+            UNION ALL SELECT 'Wisconsin', 44.95, -89.5
+            UNION ALL SELECT 'Minnesota', 45.7326, -93.9196
+        )
+        SELECT am.*,
+               -- Add small random offset to avoid overlapping points
+               rc.LATITUDE + (RANDOM() * 0.3 - 0.15) AS LATITUDE,
+               rc.LONGITUDE + (RANDOM() * 0.3 - 0.15) AS LONGITUDE
+        FROM advisor_metrics am
+        LEFT JOIN region_coordinates rc ON am.REGION = rc.REGION
+        WHERE rc.LATITUDE IS NOT NULL AND am.TOTAL_CLIENTS > 0
+    """
+    return run_query(sql)
+
+
+def get_climate_risk_locations() -> pd.DataFrame:
+    """Get climate risk locations with coordinates for mapbox visualization"""
+
+    sql = """
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        client_locations AS (
+            SELECT DISTINCT c.STATE, c.CITY, COUNT(DISTINCT c.CLIENT_ID) AS CLIENT_COUNT,
+                   COALESCE(SUM(cpv.TOTAL_PORTFOLIO_VALUE), 0) AS LOCATION_AUM
+            FROM CLIENTS c
+            LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
+            WHERE c.STATE IS NOT NULL
+            GROUP BY 1, 2
+        ),
+        state_risk_profile AS (
+            SELECT cl.STATE, cl.CLIENT_COUNT, cl.LOCATION_AUM,
+                   CASE
+                       WHEN cl.STATE IN ('FL', 'TX', 'LA', 'AL', 'MS', 'SC', 'NC') THEN 'Hurricane Risk'
+                       WHEN cl.STATE IN ('CA', 'OR', 'WA', 'CO', 'MT', 'ID') THEN 'Wildfire Risk'
+                       WHEN cl.STATE IN ('IA', 'IL', 'IN', 'KS', 'MO', 'NE', 'OK') THEN 'Tornado Risk'
+                       WHEN cl.STATE IN ('ND', 'SD', 'MN', 'WI', 'MI', 'NY', 'VT') THEN 'Winter Storm Risk'
+                       WHEN cl.STATE IN ('AZ', 'NV', 'UT', 'NM') THEN 'Drought Risk'
+                       ELSE 'Low Climate Risk'
+                   END AS PRIMARY_CLIMATE_RISK,
+                   CASE
+                       WHEN cl.STATE IN ('FL', 'CA', 'TX', 'LA', 'NC') THEN 'Very High'
+                       WHEN cl.STATE IN ('SC', 'AL', 'MS', 'OR', 'WA', 'CO') THEN 'High'
+                       WHEN cl.STATE IN ('IA', 'IL', 'KS', 'MO', 'OK', 'AZ', 'NV') THEN 'Medium'
+                       ELSE 'Low'
+                   END AS RISK_LEVEL
+            FROM client_locations cl
+        ),
+        state_coordinates AS (
+            SELECT 'AL' AS STATE, 32.806671 AS LATITUDE, -86.791130 AS LONGITUDE
+            UNION ALL SELECT 'AK', 61.570716, -152.404419
+            UNION ALL SELECT 'AZ', 33.729759, -111.431221
+            UNION ALL SELECT 'AR', 34.969704, -92.373123
+            UNION ALL SELECT 'CA', 36.116203, -119.681564
+            UNION ALL SELECT 'CO', 39.059811, -105.311104
+            UNION ALL SELECT 'CT', 41.767, -72.677
+            UNION ALL SELECT 'DE', 39.161921, -75.526755
+            UNION ALL SELECT 'FL', 27.4518, -81.5158
+            UNION ALL SELECT 'GA', 32.9866, -83.6487
+            UNION ALL SELECT 'HI', 21.1098, -157.5311
+            UNION ALL SELECT 'ID', 44.931109, -116.237651
+            UNION ALL SELECT 'IL', 40.349457, -88.986137
+            UNION ALL SELECT 'IN', 39.790942, -86.147685
+            UNION ALL SELECT 'IA', 42.011539, -93.210526
+            UNION ALL SELECT 'KS', 38.572954, -98.580009
+            UNION ALL SELECT 'KY', 37.669773, -84.670067
+            UNION ALL SELECT 'LA', 31.266683, -91.988312
+            UNION ALL SELECT 'ME', 45.367584, -68.972168
+            UNION ALL SELECT 'MD', 39.161921, -75.526755
+            UNION ALL SELECT 'MA', 42.2352, -71.0275
+            UNION ALL SELECT 'MI', 43.354558, -84.955255
+            UNION ALL SELECT 'MN', 45.7326, -93.9196
+            UNION ALL SELECT 'MS', 32.7673, -89.6812
+            UNION ALL SELECT 'MO', 38.572954, -92.189283
+            UNION ALL SELECT 'MT', 47.052632, -110.454353
+            UNION ALL SELECT 'NE', 41.590939, -99.675285
+            UNION ALL SELECT 'NV', 39.161921, -117.055374
+            UNION ALL SELECT 'NH', 43.452492, -71.563896
+            UNION ALL SELECT 'NJ', 40.221741, -74.756138
+            UNION ALL SELECT 'NM', 34.307144, -106.018066
+            UNION ALL SELECT 'NY', 42.659829, -75.615011
+            UNION ALL SELECT 'NC', 35.771, -78.638
+            UNION ALL SELECT 'ND', 47.259, -99.955
+            UNION ALL SELECT 'OH', 40.269789, -82.955255
+            UNION ALL SELECT 'OK', 35.482309, -97.534994
+            UNION ALL SELECT 'OR', 44.931109, -123.029159
+            UNION ALL SELECT 'PA', 40.269789, -77.727883
+            UNION ALL SELECT 'RI', 41.82355, -71.422132
+            UNION ALL SELECT 'SC', 33.836082, -81.163727
+            UNION ALL SELECT 'SD', 44.268543, -99.672985
+            UNION ALL SELECT 'TN', 35.771, -86.25
+            UNION ALL SELECT 'TX', 31.106, -97.6475
+            UNION ALL SELECT 'UT', 39.161921, -111.431221
+            UNION ALL SELECT 'VT', 44.26639, -72.580536
+            UNION ALL SELECT 'VA', 37.54, -78.64
+            UNION ALL SELECT 'WA', 47.042418, -122.893077
+            UNION ALL SELECT 'WV', 38.349497, -81.633294
+            UNION ALL SELECT 'WI', 44.95, -89.5
+            UNION ALL SELECT 'WY', 42.7475, -107.2085
+        )
+        SELECT srp.*, sc.LATITUDE, sc.LONGITUDE
+        FROM state_risk_profile srp
+        LEFT JOIN state_coordinates sc ON srp.STATE = sc.STATE
+        WHERE sc.LATITUDE IS NOT NULL AND srp.LOCATION_AUM > 0
+        ORDER BY srp.LOCATION_AUM DESC
+    """
+    return run_query(sql)
+
+
 # -----------------------------
 # UI Layout
 # -----------------------------
@@ -1930,6 +2187,33 @@ with tabs[12]:
             fig_map.update_layout(geo=dict(bgcolor="rgba(0,0,0,0)"))
             st.plotly_chart(fig_map, use_container_width=True)
 
+        # Interactive Mapbox visualization for client locations
+        st.subheader("🗺️ Interactive Client Location Map")
+        client_locations_df = get_client_location_details()
+        if not client_locations_df.empty:
+            # Create scatter mapbox without token (uses open street map)
+            fig_mapbox = px.scatter_mapbox(
+                client_locations_df,
+                lat="LATITUDE",
+                lon="LONGITUDE",
+                size="PORTFOLIO_VALUE",
+                color="RISK_TOLERANCE",
+                hover_name="CLIENT_NAME",
+                hover_data=["CITY", "STATE", "PORTFOLIO_VALUE", "NET_WORTH_ESTIMATE"],
+                title="Client Portfolio Distribution - Interactive Map",
+                zoom=3,
+                center={"lat": 39.8283, "lon": -98.5795},  # Center of USA
+                mapbox_style="open-street-map",  # No token required
+                labels={"PORTFOLIO_VALUE": "Portfolio Value ($)"},
+                size_max=20,
+            )
+            fig_mapbox.update_layout(
+                mapbox_style="open-street-map",
+                height=600,
+                margin={"r": 0, "t": 40, "l": 0, "b": 0},
+            )
+            st.plotly_chart(fig_mapbox, use_container_width=True)
+
         # Risk profile analysis
         col3, col4 = st.columns(2)
         with col3:
@@ -2010,6 +2294,38 @@ with tabs[12]:
             st.warning(
                 f"🚨 **High Climate Risk Exposure**: ${total_high_risk_aum:,.2f} AUM in very high-risk locations"
             )
+
+        # Interactive climate risk map
+        st.subheader("🌡️ Climate Risk Heat Map")
+        climate_locations_df = get_climate_risk_locations()
+        if not climate_locations_df.empty:
+            fig_climate_map = px.scatter_mapbox(
+                climate_locations_df,
+                lat="LATITUDE",
+                lon="LONGITUDE",
+                size="LOCATION_AUM",
+                color="RISK_LEVEL",
+                hover_name="STATE",
+                hover_data=["PRIMARY_CLIMATE_RISK", "CLIENT_COUNT", "LOCATION_AUM"],
+                title="Climate Risk Exposure by Location - Interactive Map",
+                zoom=3,
+                center={"lat": 39.8283, "lon": -98.5795},
+                mapbox_style="open-street-map",
+                labels={"LOCATION_AUM": "Location AUM ($)"},
+                color_discrete_map={
+                    "Very High": "#FF4444",
+                    "High": "#FF8800",
+                    "Medium": "#FFDD00",
+                    "Low": "#44FF44",
+                },
+                size_max=30,
+            )
+            fig_climate_map.update_layout(
+                mapbox_style="open-street-map",
+                height=600,
+                margin={"r": 0, "t": 40, "l": 0, "b": 0},
+            )
+            st.plotly_chart(fig_climate_map, use_container_width=True)
 
     # Market Penetration & Opportunity Analysis
     st.subheader("🎯 Market Penetration & Growth Opportunities")
@@ -2092,6 +2408,32 @@ with tabs[12]:
             st.info(
                 f"💡 **Virtual Meeting Optimization**: {len(virtual_advisors)} advisors could benefit from increased virtual client engagement"
             )
+
+        # Interactive map for advisor coverage
+        st.subheader("🗺️ Advisor Territory Coverage Map")
+        advisor_locations_df = get_advisor_location_details()
+        if not advisor_locations_df.empty:
+            fig_advisor_map = px.scatter_mapbox(
+                advisor_locations_df,
+                lat="LATITUDE",
+                lon="LONGITUDE",
+                size="TOTAL_AUM",
+                color="COVERAGE_TYPE",
+                hover_name="ADVISOR_NAME",
+                hover_data=["REGION", "SPECIALIZATION", "TOTAL_CLIENTS", "TOTAL_AUM"],
+                title="Advisor Territory Coverage - Interactive Map",
+                zoom=3,
+                center={"lat": 39.8283, "lon": -98.5795},
+                mapbox_style="open-street-map",
+                labels={"TOTAL_AUM": "Total AUM ($)"},
+                size_max=25,
+            )
+            fig_advisor_map.update_layout(
+                mapbox_style="open-street-map",
+                height=600,
+                margin={"r": 0, "t": 40, "l": 0, "b": 0},
+            )
+            st.plotly_chart(fig_advisor_map, use_container_width=True)
 
     # Integration insights
     st.subheader("🔗 Data Integration Opportunities")
