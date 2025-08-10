@@ -1025,6 +1025,200 @@ def get_kyc_insights() -> pd.DataFrame:
     return run_query(sql)
 
 
+# =============================================================================
+# GEOSPATIAL ANALYTICS FUNCTIONS
+# =============================================================================
+
+
+def get_client_geographic_distribution() -> pd.DataFrame:
+    """Geographic Distribution of Clients - AUM concentration and coverage analysis"""
+
+    sql = """
+        WITH client_aum AS (
+            SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME, c.CITY, c.STATE, c.ZIP_CODE,
+                   c.NET_WORTH_ESTIMATE, c.ANNUAL_INCOME, c.RISK_TOLERANCE,
+                   COALESCE(SUM(p.TOTAL_VALUE), 0) AS PORTFOLIO_VALUE
+            FROM CLIENTS c
+            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+        ),
+        state_metrics AS (
+            SELECT STATE,
+                   COUNT(DISTINCT CLIENT_ID) AS CLIENT_COUNT,
+                   SUM(PORTFOLIO_VALUE) AS TOTAL_AUM,
+                   AVG(PORTFOLIO_VALUE) AS AVG_AUM_PER_CLIENT,
+                   SUM(NET_WORTH_ESTIMATE) AS TOTAL_NET_WORTH,
+                   AVG(ANNUAL_INCOME) AS AVG_INCOME,
+                   COUNT(CASE WHEN RISK_TOLERANCE = 'Aggressive Growth' THEN 1 END) AS AGGRESSIVE_CLIENTS,
+                   COUNT(CASE WHEN RISK_TOLERANCE = 'Conservative' THEN 1 END) AS CONSERVATIVE_CLIENTS
+            FROM client_aum
+            GROUP BY 1
+        )
+        SELECT sm.*,
+               ROUND(sm.TOTAL_AUM / NULLIF(sm.CLIENT_COUNT, 0), 2) AS AUM_PER_CLIENT,
+               ROUND(sm.AGGRESSIVE_CLIENTS::FLOAT / NULLIF(sm.CLIENT_COUNT, 0) * 100, 1) AS PCT_AGGRESSIVE,
+               ROUND(sm.CONSERVATIVE_CLIENTS::FLOAT / NULLIF(sm.CLIENT_COUNT, 0) * 100, 1) AS PCT_CONSERVATIVE,
+               CASE
+                   WHEN sm.TOTAL_AUM > 50000000 THEN 'High Value Market'
+                   WHEN sm.TOTAL_AUM > 20000000 THEN 'Medium Value Market'
+                   ELSE 'Emerging Market'
+               END AS MARKET_TIER
+        FROM state_metrics sm
+        ORDER BY sm.TOTAL_AUM DESC
+    """
+    return run_query(sql)
+
+
+def get_weather_risk_analysis() -> pd.DataFrame:
+    """Climate & Weather Risk Analysis - Portfolio exposure to weather-sensitive investments"""
+
+    sql = """
+        WITH client_locations AS (
+            SELECT DISTINCT c.STATE, c.CITY, COUNT(DISTINCT c.CLIENT_ID) AS CLIENT_COUNT,
+                   SUM(p.TOTAL_VALUE) AS LOCATION_AUM
+            FROM CLIENTS c
+            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            WHERE c.STATE IS NOT NULL
+            GROUP BY 1, 2
+        ),
+        weather_sensitive_sectors AS (
+            SELECT 'Agriculture' AS SECTOR, 'High' AS WEATHER_SENSITIVITY, 'Drought, Flooding, Temperature' AS RISK_FACTORS
+            UNION ALL SELECT 'Energy', 'High', 'Hurricanes, Temperature Extremes'
+            UNION ALL SELECT 'Insurance', 'Very High', 'Natural Disasters, Climate Events'
+            UNION ALL SELECT 'Real Estate', 'Medium', 'Flooding, Hurricanes, Wildfires'
+            UNION ALL SELECT 'Tourism', 'High', 'Weather Patterns, Seasonal Changes'
+            UNION ALL SELECT 'Utilities', 'Medium', 'Storm Damage, Peak Demand'
+        ),
+        state_risk_profile AS (
+            SELECT cl.STATE, cl.CLIENT_COUNT, cl.LOCATION_AUM,
+                   CASE
+                       WHEN cl.STATE IN ('FL', 'TX', 'LA', 'AL', 'MS', 'SC', 'NC') THEN 'Hurricane Risk'
+                       WHEN cl.STATE IN ('CA', 'OR', 'WA', 'CO', 'MT', 'ID') THEN 'Wildfire Risk'
+                       WHEN cl.STATE IN ('IA', 'IL', 'IN', 'KS', 'MO', 'NE', 'OK') THEN 'Tornado Risk'
+                       WHEN cl.STATE IN ('ND', 'SD', 'MN', 'WI', 'MI', 'NY', 'VT') THEN 'Winter Storm Risk'
+                       WHEN cl.STATE IN ('AZ', 'NV', 'UT', 'NM') THEN 'Drought Risk'
+                       ELSE 'Low Climate Risk'
+                   END AS PRIMARY_CLIMATE_RISK,
+                   CASE
+                       WHEN cl.STATE IN ('FL', 'CA', 'TX', 'LA', 'NC') THEN 'Very High'
+                       WHEN cl.STATE IN ('SC', 'AL', 'MS', 'OR', 'WA', 'CO') THEN 'High'
+                       WHEN cl.STATE IN ('IA', 'IL', 'KS', 'MO', 'OK', 'AZ', 'NV') THEN 'Medium'
+                       ELSE 'Low'
+                   END AS RISK_LEVEL
+            FROM client_locations cl
+        )
+        SELECT srp.*,
+               ROUND(srp.LOCATION_AUM / NULLIF(srp.CLIENT_COUNT, 0), 2) AS AVG_AUM_PER_CLIENT,
+               wss.SECTOR, wss.WEATHER_SENSITIVITY, wss.RISK_FACTORS
+        FROM state_risk_profile srp
+        CROSS JOIN weather_sensitive_sectors wss
+        WHERE srp.RISK_LEVEL IN ('High', 'Very High')
+        ORDER BY srp.LOCATION_AUM DESC, srp.STATE
+    """
+    return run_query(sql)
+
+
+def get_market_penetration_analysis() -> pd.DataFrame:
+    """Market Penetration & Opportunity Analysis using demographic and POI data"""
+
+    sql = """
+        WITH zip_metrics AS (
+            SELECT c.ZIP_CODE, c.STATE, c.CITY,
+                   COUNT(DISTINCT c.CLIENT_ID) AS OUR_CLIENTS,
+                   SUM(p.TOTAL_VALUE) AS OUR_AUM,
+                   AVG(c.NET_WORTH_ESTIMATE) AS AVG_NET_WORTH,
+                   AVG(c.ANNUAL_INCOME) AS AVG_INCOME
+            FROM CLIENTS c
+            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            WHERE c.ZIP_CODE IS NOT NULL
+            GROUP BY 1, 2, 3
+        ),
+        market_opportunity AS (
+            SELECT zm.*,
+                   -- Simulated market data - would integrate with actual POI/demographic data
+                   CASE
+                       WHEN zm.AVG_NET_WORTH > 5000000 THEN 2000
+                       WHEN zm.AVG_NET_WORTH > 1000000 THEN 1000
+                       WHEN zm.AVG_NET_WORTH > 500000 THEN 500
+                       ELSE 200
+                   END AS ESTIMATED_TOTAL_HNW_HOUSEHOLDS,
+                   CASE
+                       WHEN zm.STATE IN ('NY', 'CA', 'CT', 'NJ', 'MA') THEN 'High Wealth Density'
+                       WHEN zm.STATE IN ('FL', 'TX', 'IL', 'WA', 'VA') THEN 'Medium Wealth Density'
+                       ELSE 'Developing Market'
+                   END AS MARKET_TYPE
+            FROM zip_metrics zm
+        )
+        SELECT mo.*,
+               ROUND(mo.OUR_CLIENTS::FLOAT / NULLIF(mo.ESTIMATED_TOTAL_HNW_HOUSEHOLDS, 0) * 100, 2) AS MARKET_PENETRATION_PCT,
+               ROUND((mo.ESTIMATED_TOTAL_HNW_HOUSEHOLDS - mo.OUR_CLIENTS) * mo.AVG_NET_WORTH * 0.1, 2) AS OPPORTUNITY_VALUE,
+               CASE
+                   WHEN (mo.OUR_CLIENTS::FLOAT / NULLIF(mo.ESTIMATED_TOTAL_HNW_HOUSEHOLDS, 0) * 100) < 5 THEN 'High Opportunity'
+                   WHEN (mo.OUR_CLIENTS::FLOAT / NULLIF(mo.ESTIMATED_TOTAL_HNW_HOUSEHOLDS, 0) * 100) < 15 THEN 'Medium Opportunity'
+                   ELSE 'Saturated Market'
+               END AS OPPORTUNITY_LEVEL
+        FROM market_opportunity mo
+        WHERE mo.OUR_CLIENTS > 0
+        ORDER BY OPPORTUNITY_VALUE DESC
+    """
+    return run_query(sql)
+
+
+def get_advisor_territory_coverage() -> pd.DataFrame:
+    """Advisor Territory Coverage & Geographic Efficiency Analysis"""
+
+    sql = """
+        WITH advisor_geography AS (
+            SELECT a.ADVISOR_ID, a.FIRST_NAME || ' ' || a.LAST_NAME AS ADVISOR_NAME,
+                   a.SPECIALIZATION, a.YEARS_EXPERIENCE,
+                   c.STATE, c.CITY, c.ZIP_CODE,
+                   COUNT(DISTINCT acr.CLIENT_ID) AS CLIENTS_IN_AREA,
+                   SUM(p.TOTAL_VALUE) AS AUM_IN_AREA,
+                   -- Simplified distance calculation using state centroids
+                   CASE c.STATE
+                       WHEN 'CA' THEN 1500 WHEN 'TX' THEN 800 WHEN 'FL' THEN 1200
+                       WHEN 'NY' THEN 500 WHEN 'PA' THEN 300 WHEN 'IL' THEN 600
+                       WHEN 'OH' THEN 400 WHEN 'GA' THEN 700 WHEN 'NC' THEN 500
+                       WHEN 'MI' THEN 450 WHEN 'NJ' THEN 200 WHEN 'VA' THEN 350
+                       ELSE 750
+                   END AS ESTIMATED_DISTANCE_MILES
+            FROM ADVISORS a
+            JOIN ADVISOR_CLIENT_RELATIONSHIPS acr ON a.ADVISOR_ID = acr.ADVISOR_ID
+            JOIN CLIENTS c ON acr.CLIENT_ID = c.CLIENT_ID
+            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            WHERE c.STATE IS NOT NULL
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+        ),
+        territory_metrics AS (
+            SELECT ag.ADVISOR_ID, ag.ADVISOR_NAME, ag.SPECIALIZATION,
+                   COUNT(DISTINCT ag.STATE) AS STATES_COVERED,
+                   COUNT(DISTINCT ag.CITY) AS CITIES_COVERED,
+                   SUM(ag.CLIENTS_IN_AREA) AS TOTAL_CLIENTS,
+                   SUM(ag.AUM_IN_AREA) AS TOTAL_AUM,
+                   ROUND(AVG(ag.ESTIMATED_DISTANCE_MILES), 2) AS AVG_TRAVEL_DISTANCE,
+                   CASE
+                       WHEN AVG(ag.ESTIMATED_DISTANCE_MILES) > 1000 THEN 'National Coverage'
+                       WHEN AVG(ag.ESTIMATED_DISTANCE_MILES) > 500 THEN 'Regional Coverage'
+                       WHEN AVG(ag.ESTIMATED_DISTANCE_MILES) > 200 THEN 'State Coverage'
+                       ELSE 'Local Coverage'
+                   END AS COVERAGE_TYPE
+            FROM advisor_geography ag
+            GROUP BY 1, 2, 3
+        )
+        SELECT tm.*,
+               ROUND(tm.TOTAL_AUM / NULLIF(tm.TOTAL_CLIENTS, 0), 2) AS AUM_PER_CLIENT,
+               ROUND(tm.TOTAL_CLIENTS / NULLIF(tm.STATES_COVERED, 0), 1) AS CLIENTS_PER_STATE,
+               CASE
+                   WHEN tm.AVG_TRAVEL_DISTANCE > 800 THEN 'Optimize for Virtual Meetings'
+                   WHEN tm.AVG_TRAVEL_DISTANCE > 400 THEN 'Hybrid Approach Recommended'
+                   ELSE 'In-Person Focus Viable'
+               END AS RECOMMENDED_STRATEGY
+        FROM territory_metrics tm
+        ORDER BY tm.TOTAL_AUM DESC
+    """
+    return run_query(sql)
+
+
 # -----------------------------
 # UI Layout
 # -----------------------------
@@ -1061,6 +1255,7 @@ with st.expander(
     | 💬 **Complaint/Sentiment Intelligence** | Mine notes for issues & intent | INTERACTIONS (OUTCOME_NOTES, LLM_GENERATED_CONTENT) | NPS proxy, time-to-resolution | Low / 1–2 wks |
     | 🤖 **Wealth Narrative & Client Briefing** | Auto-generate client summaries & talking points | CLIENTS, PORTFOLIOS, POSITION_HISTORY, INTERACTIONS | Prep time saved, call quality score | Low / 1–2 wks |
     | 📋 **KYB/KYC Ops Copilot** | Speed up checks & documentation Q&A | CLIENTS/ACCOUNTS + external docs | Cycle time, touchless rate | Med / 3–6 wks |
+    | 🌍 **Geospatial Analytics & Climate Risk** | Location-based insights and weather risk analysis | CLIENTS + Weather/POI data | Geographic AUM distribution, climate exposure | Med / 3–5 wks |
     """
     )
     st.info(
@@ -1148,6 +1343,7 @@ tabs = st.tabs(
         "💬 Sentiment",
         "🤖 AI Briefing",
         "📋 KYC Copilot",
+        "🌍 Geospatial Analytics",
     ]
 )
 
@@ -1648,3 +1844,225 @@ with tabs[11]:
         )
     else:
         st.success("✅ All clients are up to date with KYC requirements.")
+
+
+# 🌍 Geospatial Analytics
+with tabs[12]:
+    st.subheader("🌍 Geospatial Analytics & Climate Risk")
+    st.caption(
+        "Location-based insights using Snowflake Weather & POI data | KPIs: Geographic AUM distribution, climate risk exposure, market penetration"
+    )
+
+    # Geographic Distribution Analysis
+    st.subheader("🗺️ Geographic Distribution & Market Concentration")
+    geo_dist_df = get_client_geographic_distribution()
+    if not geo_dist_df.empty:
+        # Top states by AUM
+        col1, col2 = st.columns(2)
+        with col1:
+            top_states = geo_dist_df.head(10)
+            fig = px.bar(
+                top_states,
+                x="STATE",
+                y="TOTAL_AUM",
+                color="MARKET_TIER",
+                title="Top States by Total AUM",
+                labels={"TOTAL_AUM": "Total AUM ($)", "STATE": "State"},
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            # Geographic choropleth map
+            fig_map = px.choropleth(
+                geo_dist_df,
+                locations="STATE",
+                color="TOTAL_AUM",
+                locationmode="USA-states",
+                scope="usa",
+                title="AUM Distribution Across United States",
+                labels={"TOTAL_AUM": "Total AUM ($)"},
+                color_continuous_scale="Blues",
+            )
+            fig_map.update_layout(geo=dict(bgcolor="rgba(0,0,0,0)"))
+            st.plotly_chart(fig_map, use_container_width=True)
+
+        # Risk profile analysis
+        col3, col4 = st.columns(2)
+        with col3:
+            fig_risk = px.scatter(
+                geo_dist_df,
+                x="PCT_CONSERVATIVE",
+                y="PCT_AGGRESSIVE",
+                size="CLIENT_COUNT",
+                color="MARKET_TIER",
+                hover_data=["STATE", "TOTAL_AUM"],
+                title="Risk Profile Distribution by Market",
+                labels={
+                    "PCT_CONSERVATIVE": "% Conservative Clients",
+                    "PCT_AGGRESSIVE": "% Aggressive Clients",
+                },
+            )
+            st.plotly_chart(fig_risk, use_container_width=True)
+
+        with col4:
+            fig_income = px.box(
+                geo_dist_df,
+                x="MARKET_TIER",
+                y="AVG_INCOME",
+                title="Average Income by Market Tier",
+                labels={"AVG_INCOME": "Average Income ($)"},
+            )
+            st.plotly_chart(fig_income, use_container_width=True)
+
+        st.subheader("📊 Geographic Distribution Details")
+        st.dataframe(geo_dist_df, use_container_width=True)
+
+    # Climate & Weather Risk Analysis
+    st.subheader("🌪️ Climate & Weather Risk Exposure")
+    weather_risk_df = get_weather_risk_analysis()
+    if not weather_risk_df.empty:
+        # Primary climate risks
+        risk_summary = (
+            weather_risk_df.groupby("PRIMARY_CLIMATE_RISK")
+            .agg({"LOCATION_AUM": "sum", "CLIENT_COUNT": "sum"})
+            .reset_index()
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_climate = px.pie(
+                risk_summary,
+                values="LOCATION_AUM",
+                names="PRIMARY_CLIMATE_RISK",
+                title="AUM Exposure by Climate Risk Type",
+            )
+            st.plotly_chart(fig_climate, use_container_width=True)
+
+        with col2:
+            # Weather sensitivity by sector
+            sector_analysis = (
+                weather_risk_df.groupby(["SECTOR", "WEATHER_SENSITIVITY"])
+                .agg({"LOCATION_AUM": "sum"})
+                .reset_index()
+            )
+            fig_sector = px.bar(
+                sector_analysis,
+                x="SECTOR",
+                y="LOCATION_AUM",
+                color="WEATHER_SENSITIVITY",
+                title="Weather-Sensitive Sector Exposure",
+                labels={"LOCATION_AUM": "Exposed AUM ($)"},
+            )
+            fig_sector.update_xaxis(tickangle=45)
+            st.plotly_chart(fig_sector, use_container_width=True)
+
+        st.subheader("⚠️ Climate Risk Assessment Details")
+        st.dataframe(weather_risk_df, use_container_width=True)
+
+        # Climate risk insights
+        high_risk_states = weather_risk_df[weather_risk_df["RISK_LEVEL"] == "Very High"]
+        if not high_risk_states.empty:
+            total_high_risk_aum = high_risk_states["LOCATION_AUM"].sum()
+            st.warning(
+                f"🚨 **High Climate Risk Exposure**: ${total_high_risk_aum:,.2f} AUM in very high-risk locations"
+            )
+
+    # Market Penetration & Opportunity Analysis
+    st.subheader("🎯 Market Penetration & Growth Opportunities")
+    market_df = get_market_penetration_analysis()
+    if not market_df.empty:
+        # Opportunity analysis
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_penetration = px.scatter(
+                market_df,
+                x="MARKET_PENETRATION_PCT",
+                y="OPPORTUNITY_VALUE",
+                size="OUR_AUM",
+                color="OPPORTUNITY_LEVEL",
+                hover_data=["CITY", "STATE", "OUR_CLIENTS"],
+                title="Market Penetration vs Growth Opportunity",
+                labels={
+                    "MARKET_PENETRATION_PCT": "Market Penetration (%)",
+                    "OPPORTUNITY_VALUE": "Opportunity Value ($)",
+                },
+            )
+            st.plotly_chart(fig_penetration, use_container_width=True)
+
+        with col2:
+            # Top opportunities
+            top_opportunities = market_df.nlargest(10, "OPPORTUNITY_VALUE")
+            fig_opp = px.bar(
+                top_opportunities,
+                x="OPPORTUNITY_VALUE",
+                y="CITY",
+                orientation="h",
+                color="MARKET_TYPE",
+                title="Top 10 Market Opportunities",
+                labels={"OPPORTUNITY_VALUE": "Opportunity Value ($)"},
+            )
+            st.plotly_chart(fig_opp, use_container_width=True)
+
+        st.subheader("📈 Market Opportunity Details")
+        st.dataframe(market_df, use_container_width=True)
+
+    # Advisor Territory Coverage
+    st.subheader("👥 Advisor Territory Coverage & Efficiency")
+    territory_df = get_advisor_territory_coverage()
+    if not territory_df.empty:
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_coverage = px.scatter(
+                territory_df,
+                x="AVG_TRAVEL_DISTANCE",
+                y="AUM_PER_CLIENT",
+                size="TOTAL_AUM",
+                color="COVERAGE_TYPE",
+                hover_data=["ADVISOR_NAME", "TOTAL_CLIENTS"],
+                title="Advisor Efficiency: Travel Distance vs AUM per Client",
+                labels={
+                    "AVG_TRAVEL_DISTANCE": "Avg Travel Distance (miles)",
+                    "AUM_PER_CLIENT": "AUM per Client ($)",
+                },
+            )
+            st.plotly_chart(fig_coverage, use_container_width=True)
+
+        with col2:
+            # Coverage distribution
+            coverage_dist = territory_df["COVERAGE_TYPE"].value_counts()
+            fig_dist = px.pie(
+                values=coverage_dist.values,
+                names=coverage_dist.index,
+                title="Advisor Coverage Distribution",
+            )
+            st.plotly_chart(fig_dist, use_container_width=True)
+
+        st.subheader("🗺️ Territory Coverage Analysis")
+        st.dataframe(territory_df, use_container_width=True)
+
+        # Strategy recommendations
+        virtual_advisors = territory_df[
+            territory_df["RECOMMENDED_STRATEGY"] == "Optimize for Virtual Meetings"
+        ]
+        if not virtual_advisors.empty:
+            st.info(
+                f"💡 **Virtual Meeting Optimization**: {len(virtual_advisors)} advisors could benefit from increased virtual client engagement"
+            )
+
+    # Integration insights
+    st.subheader("🔗 Data Integration Opportunities")
+    st.info(
+        """
+    **Enhanced with Snowflake Marketplace Data**:
+
+    🌦️ **Weather & Environment Data**: Climate risk analysis, seasonal investment patterns, weather-sensitive sector exposure
+
+    🏢 **US Addresses & POI Data**: Market density analysis, competitive landscape mapping, demographic targeting
+
+    **Potential Integrations**:
+    • Real-time weather alerts for portfolio adjustments
+    • POI-based market sizing and competitive analysis
+    • Demographic overlays for targeted marketing campaigns
+    • Climate scenario modeling for long-term planning
+    """
+    )
