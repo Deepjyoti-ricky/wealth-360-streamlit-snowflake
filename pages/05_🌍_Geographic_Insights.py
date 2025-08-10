@@ -224,7 +224,7 @@ with map_subtabs[0]:
     # Create PyDeck visualization
     st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/light-v9",
+            map_style="mapbox://styles/mapbox/light-v8",
             initial_view_state=pdk.ViewState(
                 latitude=39.8283,
                 longitude=-98.5795,
@@ -347,7 +347,7 @@ with map_subtabs[1]:
     # 3D Column visualization
     st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/dark-v9",
+            map_style="mapbox://styles/mapbox/light-v8",
             initial_view_state=pdk.ViewState(
                 latitude=39.8283,
                 longitude=-98.5795,
@@ -467,7 +467,7 @@ with map_subtabs[2]:
     # Combined hexagon and scatter visualization
     st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/light-v9",
+            map_style="mapbox://styles/mapbox/light-v8",
             initial_view_state=pdk.ViewState(
                 latitude=39.8283,
                 longitude=-98.5795,
