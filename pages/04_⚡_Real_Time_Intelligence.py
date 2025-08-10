@@ -468,7 +468,10 @@ with realtime_tabs[2]:
 
             return cities
 
-        global_data = get_global_activity()
+        global_data_list = get_global_activity()
+
+        # Convert to DataFrame
+        global_df = pd.DataFrame(global_data_list)
 
         st.pydeck_chart(
             pdk.Deck(
@@ -482,9 +485,9 @@ with realtime_tabs[2]:
                 layers=[
                     pdk.Layer(
                         "ScatterplotLayer",
-                        data=global_data,
+                        data=global_df,
                         get_position=["lon", "lat"],
-                        get_color="color",
+                        get_fill_color="color",
                         get_radius="radius",
                         radius_scale=50,
                         pickable=True,
@@ -495,7 +498,9 @@ with realtime_tabs[2]:
                     "html": "<b>🌍 {city}</b><br/>Activity Level: {activity}",
                     "style": {"backgroundColor": "darkblue", "color": "white"},
                 },
-            )
+            ),
+            use_container_width=True,
+            height=500,
         )
 
         st.info(
@@ -554,7 +559,10 @@ with realtime_tabs[2]:
 
             return flows
 
-        transaction_flows = get_transaction_flows()
+        transaction_flows_list = get_transaction_flows()
+
+        # Convert to DataFrame
+        transaction_flows_df = pd.DataFrame(transaction_flows_list)
 
         st.pydeck_chart(
             pdk.Deck(
@@ -568,7 +576,7 @@ with realtime_tabs[2]:
                 layers=[
                     pdk.Layer(
                         "ArcLayer",
-                        data=transaction_flows,
+                        data=transaction_flows_df,
                         get_source_position=["source_lon", "source_lat"],
                         get_target_position=["target_lon", "target_lat"],
                         get_source_color="color",
@@ -582,7 +590,9 @@ with realtime_tabs[2]:
                     "html": "<b>💰 Transaction Flow</b><br/>Amount: ${amount:,.0f}",
                     "style": {"backgroundColor": "green", "color": "white"},
                 },
-            )
+            ),
+            use_container_width=True,
+            height=500,
         )
 
         st.success(

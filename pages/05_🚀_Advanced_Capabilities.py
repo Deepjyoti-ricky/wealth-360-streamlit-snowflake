@@ -8,6 +8,7 @@ Author: Deepjyoti Dev, Senior Data Cloud Architect, Snowflake GXC Team
 """
 
 import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import pydeck as pdk
@@ -348,21 +349,23 @@ with advanced_tabs[0]:
                     },
                 ]
 
-            metro_data = get_metro_data()
+            metro_data_list = get_metro_data()
 
-            # Add color gradients based on AUM
-            for metro in metro_data:
-                metro["size"] = metro["aum"] / 1000000  # Scale for visualization
-                metro["color"] = [
-                    min(255, int(255 * (metro["aum"] / 280000000))),
-                    100,
-                    max(50, 255 - int(255 * (metro["aum"] / 280000000))),
-                    220,
-                ]
+            # Convert to DataFrame and add calculated fields
+            metro_df = pd.DataFrame(metro_data_list)
+            metro_df["size"] = metro_df["aum"] / 1000000  # Scale for visualization
+            metro_df["color_r"] = np.minimum(
+                255, (255 * (metro_df["aum"] / 280000000)).astype(int)
+            )
+            metro_df["color_g"] = 100
+            metro_df["color_b"] = np.maximum(
+                50, (255 - 255 * (metro_df["aum"] / 280000000)).astype(int)
+            )
+            metro_df["color_a"] = 220
 
             st.pydeck_chart(
                 pdk.Deck(
-                    map_style="mapbox://styles/mapbox/satellite-streets-v12",
+                    map_style="mapbox://styles/mapbox/light-v8",
                     initial_view_state=pdk.ViewState(
                         latitude=39.8283,
                         longitude=-98.5795,
@@ -373,9 +376,9 @@ with advanced_tabs[0]:
                     layers=[
                         pdk.Layer(
                             "ScatterplotLayer",
-                            data=metro_data,
+                            data=metro_df,
                             get_position=["lon", "lat"],
-                            get_color="color",
+                            get_fill_color=["color_r", "color_g", "color_b", "color_a"],
                             get_radius="size",
                             radius_scale=8000,
                             radius_min_pixels=15,
@@ -395,7 +398,9 @@ with advanced_tabs[0]:
                             "fontSize": "12px",
                         },
                     },
-                )
+                ),
+                use_container_width=True,
+                height=500,
             )
 
         with map_tabs[2]:
@@ -441,7 +446,10 @@ with advanced_tabs[0]:
 
                 return locations
 
-            heatmap_data = get_heatmap_data()
+            heatmap_data_list = get_heatmap_data()
+
+            # Convert to DataFrame
+            heatmap_df = pd.DataFrame(heatmap_data_list)
 
             st.pydeck_chart(
                 pdk.Deck(
@@ -455,7 +463,7 @@ with advanced_tabs[0]:
                     layers=[
                         pdk.Layer(
                             "HexagonLayer",
-                            data=heatmap_data,
+                            data=heatmap_df,
                             get_position=["lon", "lat"],
                             get_weight="weight",
                             radius=50000,
@@ -467,7 +475,9 @@ with advanced_tabs[0]:
                             auto_highlight=True,
                         )
                     ],
-                )
+                ),
+                use_container_width=True,
+                height=500,
             )
 
             st.info(
@@ -536,7 +546,11 @@ with advanced_tabs[0]:
 
                 return growth_centers, routes
 
-            growth_centers, growth_routes = get_growth_trajectory()
+            growth_centers_list, growth_routes_list = get_growth_trajectory()
+
+            # Convert to DataFrames
+            growth_centers_df = pd.DataFrame(growth_centers_list)
+            growth_routes_df = pd.DataFrame(growth_routes_list)
 
             st.pydeck_chart(
                 pdk.Deck(
@@ -552,7 +566,7 @@ with advanced_tabs[0]:
                         # Growth flow lines
                         pdk.Layer(
                             "ArcLayer",
-                            data=growth_routes,
+                            data=growth_routes_df,
                             get_source_position=["start_lon", "start_lat"],
                             get_target_position=["end_lon", "end_lat"],
                             get_source_color="color",
@@ -564,9 +578,9 @@ with advanced_tabs[0]:
                         # Growth centers
                         pdk.Layer(
                             "ScatterplotLayer",
-                            data=growth_centers,
+                            data=growth_centers_df,
                             get_position=["lon", "lat"],
-                            get_color=[255, 165, 0, 200],
+                            get_fill_color=[255, 165, 0, 200],
                             get_radius="growth",
                             radius_scale=8000,
                             pickable=True,
@@ -576,7 +590,9 @@ with advanced_tabs[0]:
                         "html": "<b>{name}</b><br/>Growth Rate: {growth}%",
                         "style": {"backgroundColor": "orange", "color": "white"},
                     },
-                )
+                ),
+                use_container_width=True,
+                height=500,
             )
 
             st.success(
@@ -712,7 +728,10 @@ with advanced_tabs[1]:
 
             return high_risk_areas
 
-        flood_data = get_flood_risk_data()
+        flood_data_list = get_flood_risk_data()
+
+        # Convert to DataFrame
+        flood_df = pd.DataFrame(flood_data_list)
 
         st.pydeck_chart(
             pdk.Deck(
@@ -727,9 +746,9 @@ with advanced_tabs[1]:
                 layers=[
                     pdk.Layer(
                         "ScatterplotLayer",
-                        data=flood_data,
+                        data=flood_df,
                         get_position=["lon", "lat"],
-                        get_color="color",
+                        get_fill_color="color",
                         get_radius="radius",
                         radius_scale=300,
                         radius_min_pixels=20,
@@ -744,10 +763,12 @@ with advanced_tabs[1]:
                     "AUM at Risk: ${aum:,.0f}",
                     "style": {"backgroundColor": "navy", "color": "white"},
                 },
-            )
+            ),
+            use_container_width=True,
+            height=500,
         )
 
-        total_flood_risk = sum(area["aum"] for area in flood_data)
+        total_flood_risk = flood_df["aum"].sum()
         st.warning(
             f"🌊 **Flood Risk Exposure**: ${total_flood_risk:,.0f} AUM in flood-prone areas"
         )
@@ -825,7 +846,10 @@ with advanced_tabs[1]:
 
             return fire_risk_areas
 
-        wildfire_data = get_wildfire_risk_data()
+        wildfire_data_list = get_wildfire_risk_data()
+
+        # Convert to DataFrame
+        wildfire_df = pd.DataFrame(wildfire_data_list)
 
         st.pydeck_chart(
             pdk.Deck(
@@ -840,7 +864,7 @@ with advanced_tabs[1]:
                 layers=[
                     pdk.Layer(
                         "ColumnLayer",
-                        data=wildfire_data,
+                        data=wildfire_df,
                         get_position=["lon", "lat"],
                         get_elevation="elevation",
                         elevation_scale=800,
@@ -856,10 +880,12 @@ with advanced_tabs[1]:
                     "AUM at Risk: ${aum:,.0f}",
                     "style": {"backgroundColor": "darkred", "color": "white"},
                 },
-            )
+            ),
+            use_container_width=True,
+            height=500,
         )
 
-        total_fire_risk = sum(area["aum"] for area in wildfire_data)
+        total_fire_risk = wildfire_df["aum"].sum()
         st.error(
             f"🔥 **Wildfire Risk Exposure**: ${total_fire_risk:,.0f} AUM in fire-prone areas"
         )
@@ -940,7 +966,11 @@ with advanced_tabs[1]:
 
             return storm_areas, storm_paths
 
-        storm_areas, storm_paths = get_storm_pattern_data()
+        storm_areas_list, storm_paths_list = get_storm_pattern_data()
+
+        # Convert to DataFrames
+        storm_areas_df = pd.DataFrame(storm_areas_list)
+        storm_paths_df = pd.DataFrame(storm_paths_list)
 
         st.pydeck_chart(
             pdk.Deck(
@@ -956,7 +986,7 @@ with advanced_tabs[1]:
                     # Storm paths
                     pdk.Layer(
                         "ArcLayer",
-                        data=storm_paths,
+                        data=storm_paths_df,
                         get_source_position=["start_lon", "start_lat"],
                         get_target_position=["end_lon", "end_lat"],
                         get_source_color="color",
@@ -968,9 +998,9 @@ with advanced_tabs[1]:
                     # Storm centers
                     pdk.Layer(
                         "ScatterplotLayer",
-                        data=storm_areas,
+                        data=storm_areas_df,
                         get_position=["lon", "lat"],
-                        get_color=[255, 255, 0, 200],
+                        get_fill_color=[255, 255, 0, 200],
                         get_radius="frequency",
                         radius_scale=5000,
                         pickable=True,
@@ -982,7 +1012,9 @@ with advanced_tabs[1]:
                     "Annual Frequency: {frequency}",
                     "style": {"backgroundColor": "purple", "color": "white"},
                 },
-            )
+            ),
+            use_container_width=True,
+            height=500,
         )
 
         st.info(
