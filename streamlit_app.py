@@ -826,13 +826,14 @@ def get_event_driven_opportunities() -> pd.DataFrame:
 
     sql = """
         WITH recent_market_events AS (
-            SELECT DISTINCT EVENT_TYPE, EVENT_DATE, IMPACT_DESCRIPTION
+            SELECT DISTINCT EVENT_ID, EVENT_NAME, IMPACT_TYPE, DESCRIPTION, START_DATE, END_DATE
             FROM MARKET_EVENTS
-            WHERE EVENT_DATE >= DATEADD(DAY, -30, CURRENT_DATE)
+            WHERE START_DATE >= DATEADD(DAY, -90, CURRENT_DATE)
+               OR END_DATE >= DATEADD(DAY, -90, CURRENT_DATE)
         ),
         client_impact AS (
             SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME,
-                   c.LIFE_EVENT, c.LIFE_EVENT_DATE,
+                   c.LIFE_EVENT, c.LAST_UPDATE_TIMESTAMP,
                    MAX(i.TIMESTAMP) AS LAST_CONTACT,
                    DATEDIFF(DAY, MAX(i.TIMESTAMP), CURRENT_DATE) AS DAYS_SINCE_CONTACT
             FROM CLIENTS c
@@ -841,24 +842,24 @@ def get_event_driven_opportunities() -> pd.DataFrame:
         )
         SELECT ci.CLIENT_ID, ci.FIRST_NAME, ci.LAST_NAME,
                CASE
-                   WHEN ci.LIFE_EVENT IS NOT NULL AND ci.LIFE_EVENT_DATE >= DATEADD(DAY, -60, CURRENT_DATE) THEN 'Recent Life Event'
+                   WHEN ci.LIFE_EVENT IS NOT NULL AND ci.LAST_UPDATE_TIMESTAMP >= DATEADD(DAY, -60, CURRENT_DATE) THEN 'Recent Life Event'
                    WHEN ci.DAYS_SINCE_CONTACT > 90 THEN 'Long-term Re-engagement'
                    WHEN EXISTS (SELECT 1 FROM recent_market_events) THEN 'Market Event Follow-up'
                    ELSE 'Regular Check-in'
                END AS OUTREACH_TYPE,
                ci.LIFE_EVENT,
-               ci.LIFE_EVENT_DATE,
+               ci.LAST_UPDATE_TIMESTAMP AS LIFE_EVENT_DATE,
                ci.LAST_CONTACT,
                ci.DAYS_SINCE_CONTACT,
                CASE
-                   WHEN ci.LIFE_EVENT IN ('Marriage', 'Birth', 'Retirement') THEN 'High'
+                   WHEN ci.LIFE_EVENT IN ('Marriage', 'Birth of Child', 'Retirement') THEN 'High'
                    WHEN ci.DAYS_SINCE_CONTACT > 180 THEN 'High'
                    WHEN ci.DAYS_SINCE_CONTACT > 90 THEN 'Medium'
                    ELSE 'Low'
                END AS PRIORITY,
                CASE
                    WHEN ci.LIFE_EVENT = 'Marriage' THEN 'Joint account setup, beneficiary updates'
-                   WHEN ci.LIFE_EVENT = 'Birth' THEN 'Education savings, life insurance review'
+                   WHEN ci.LIFE_EVENT = 'Birth of Child' THEN 'Education savings, life insurance review'
                    WHEN ci.LIFE_EVENT = 'Retirement' THEN 'Income planning, asset allocation review'
                    WHEN ci.DAYS_SINCE_CONTACT > 180 THEN 'Relationship health check, portfolio review'
                    ELSE 'Market update, investment opportunities'
@@ -925,7 +926,7 @@ def generate_wealth_narrative(client_id: str) -> Dict[str, Any]:
     # Client overview
     overview_sql = f"""
         SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME, c.RISK_TOLERANCE,
-               c.NET_WORTH_ESTIMATE, c.LIFE_EVENT, c.LIFE_EVENT_DATE,
+               c.NET_WORTH_ESTIMATE, c.LIFE_EVENT, c.LAST_UPDATE_TIMESTAMP AS LIFE_EVENT_DATE,
                COUNT(DISTINCT p.PORTFOLIO_ID) AS NUM_PORTFOLIOS,
                COUNT(DISTINCT acr.ADVISOR_ID) AS NUM_ADVISORS
         FROM CLIENTS c
