@@ -7,15 +7,58 @@
 
 **Enterprise-grade wealth management analytics platform** built for Banking, Financial Services & Insurance (BFSI) organizations. Leverages **Snowflake's advanced analytics capabilities** with **Streamlit in Snowflake** for native deployment.
 
-> 🚀 **Major Enhancement**: Transformed from basic analytics to comprehensive BFSI platform with **12 advanced use cases**, sophisticated SQL analytics, and AI-powered insights.
+> 🚀 **Latest Update**: **Multi-Page Architecture** - Redesigned entire application with modular page structure, enhanced navigation, and professional UI/UX for enterprise deployment.
 
 ## ✨ Platform Highlights
 
+- **📱 Multi-Page Architecture** - Modular design with 5 specialized pages for optimal navigation
 - **🎯 12 Advanced Use Cases** - From customer segmentation to AI-powered briefings
 - **🤖 AI-Enhanced Analytics** - GenAI features for client narratives and KYC automation
 - **📊 Interactive Visualizations** - Professional dashboards with Plotly integration
 - **⚡ Snowpark-First Architecture** - Native Snowflake deployment with seamless local fallback
 - **🏢 Enterprise-Ready** - Production-grade code quality, CI/CD, and security standards
+
+## 📱 Multi-Page Application Structure
+
+The application is now organized into 5 specialized pages for optimal user experience:
+
+### 🏠 **Main Navigation** (`streamlit_app.py`)
+- **Welcome Dashboard** with platform overview
+- **Enhanced Sidebar** with global filters and quick actions
+- **Navigation Guide** for seamless page transitions
+- **Real-time KPI metrics** in sidebar
+
+### 📊 **Executive Dashboard** (`pages/01_📊_Executive_Dashboard.py`)
+- **C-Suite KPIs** with real-time metrics and delta indicators
+- **Priority Alerts System** (Critical/Attention Required)
+- **Quick Action Center** for immediate responses
+- **Executive Summary Charts** (AUM trends, segment distribution)
+
+### 👥 **Client Analytics** (`pages/02_👥_Client_Analytics.py`)
+- **Customer 360 & Segmentation** - Single view across portfolios and behavior
+- **Next Best Actions** - AI-driven cross/upsell recommendations
+- **Churn Prevention** - Early warning system with risk scoring
+- **Event-Driven Outreach** - Life event and market timing triggers
+- **Sentiment Analysis** - NLP-style feedback intelligence
+
+### 🎯 **Portfolio Management** (`pages/03_🎯_Portfolio_Management.py`)
+- **Suitability & Risk Alerts** - Portfolio compliance monitoring
+- **Portfolio Drift Analysis** - Asset allocation optimization
+- **Idle Cash Management** - Cash-sweep opportunities
+- **Transaction Anomalies** - Statistical outlier detection
+- **Advisor Performance** - Productivity and coverage metrics
+
+### 🤖 **AI & Automation** (`pages/04_🤖_AI_Automation.py`)
+- **Wealth Narrative Generation** - Auto-generated client summaries
+- **KYC Operations Copilot** - Compliance automation
+- **AI Insights Dashboard** - Usage analytics and performance metrics
+- **Recommendations Engine** - AI-powered business insights
+
+### 🌍 **Geographic Insights** (`pages/05_🌍_Geographic_Insights.py`)
+- **Client Distribution Maps** - Interactive 3D visualizations with PyDeck
+- **Climate Risk Analysis** - Weather and environmental risk assessment
+- **Advisor Territory Coverage** - Geographic performance optimization
+- **Market Penetration Analysis** - State-by-state AUM insights
 
 ## 🎯 Advanced Use Cases Catalog
 
