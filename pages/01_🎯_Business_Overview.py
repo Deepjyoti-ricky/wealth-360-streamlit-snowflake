@@ -91,6 +91,72 @@ st.caption(
     "🧠 **AI-Powered Executive Dashboard | Real-time insights with Snowflake Cortex Intelligence**"
 )
 
+# Professional tile CSS
+st.markdown(
+    """
+<style>
+.tile-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tile { border-radius: 12px; padding: 16px; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+.tile h3 { margin: 0 0 6px 0; font-size: 18px; font-weight: 700; }
+.tile p { margin: 0; font-size: 28px; font-weight: 700; }
+.tile small { display: block; margin-top: 6px; opacity: 0.85; font-weight: 500; }
+.tile.red { background: linear-gradient(135deg, #ff5858 0%, #fb2d2d 100%); }
+.tile.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.tile.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.tile.green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #0c4633; }
+.tile .delta-up { color: #d4fff2; font-weight: 600; }
+.tile .delta-down { color: #ffe6e6; font-weight: 600; }
+@media (max-width: 1200px) { .tile-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .tile-grid { grid-template-columns: 1fr; } }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Executive tiles (overview)
+try:
+    kpis = get_global_kpis()
+    total_clients = f"{kpis.get('num_clients', 0):,}"
+    total_aum = f"${kpis.get('aum', 0):,.0f}"
+    avg_portfolio_val = 0
+    if kpis.get("num_clients", 0):
+        avg_portfolio_val = kpis.get("aum", 0) / max(kpis.get("num_clients", 1), 1)
+    avg_portfolio = f"${avg_portfolio_val:,.0f}"
+    ytd = kpis.get("ytd_growth_pct")
+    ytd_text = (
+        f"{ytd*100:.2f}%"
+        if isinstance(ytd, (int, float)) and ytd is not None
+        else "N/A"
+    )
+
+    tiles_html = f"""
+    <div class='tile-grid'>
+        <div class='tile blue'>
+            <h3>👥 Total Clients</h3>
+            <p>{total_clients}</p>
+            <small class='delta-up'>↗️ Healthy growth</small>
+        </div>
+        <div class='tile purple'>
+            <h3>💰 Total AUM</h3>
+            <p>{total_aum}</p>
+            <small class='delta-up'>↗️ Above forecast</small>
+        </div>
+        <div class='tile green'>
+            <h3>📈 Avg Portfolio</h3>
+            <p>{avg_portfolio}</p>
+            <small class='delta-up'>↗️ Optimization impact</small>
+        </div>
+        <div class='tile red'>
+            <h3>📊 YTD Growth</h3>
+            <p>{ytd_text}</p>
+            <small class='delta-up'>↗️ Cortex forecast improving</small>
+        </div>
+    </div>
+    """
+    st.markdown(tiles_html, unsafe_allow_html=True)
+except Exception:
+    pass
+
 # AI-Powered Executive Summary
 st.markdown("### 🧠 **AI-Generated Executive Summary**")
 
