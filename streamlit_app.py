@@ -1569,29 +1569,9 @@ with st.expander(
 with st.sidebar:
     st.markdown("## 🏦 **Wealth 360** Control Center")
 
-    # Connection Status
-    st.markdown("### 🔌 **Connection Status**")
+    # Validate connection silently
     try:
         session = get_snowflake_session()
-        st.success("✅ **Connected to Snowflake**")
-
-        # Enhanced session context info
-        try:
-            current_db = session.get_current_database()
-            current_schema = session.get_current_schema()
-            current_warehouse = session.get_current_warehouse()
-
-            with st.expander("📊 Session Details", expanded=False):
-                st.info(f"🗃️ **Database:** {current_db}")
-                st.info(f"📂 **Schema:** {current_schema}")
-                st.info(f"🏭 **Warehouse:** {current_warehouse}")
-
-                # Quick stats
-                if st.button("🔄 Refresh Stats"):
-                    st.rerun()
-        except Exception:
-            pass
-
     except Exception as e:
         st.error("❌ **Snowflake Connection Failed**")
         error_str = str(e)
@@ -1609,8 +1589,6 @@ with st.sidebar:
         else:
             st.exception(e)
         st.stop()
-
-    st.divider()
 
     # Navigation Helper
     st.markdown("### 🧭 **Navigation Guide**")
@@ -1693,11 +1671,13 @@ with st.sidebar:
     try:
         # Get some quick stats
         quick_stats = get_global_kpis()
-        if not quick_stats.empty and len(quick_stats) > 0:
-            stats = quick_stats.iloc[0]
-            st.metric("👥 Total Clients", f"{stats.get('TOTAL_CLIENTS', 'N/A'):,}")
-            st.metric("💰 Total AUM", f"${stats.get('TOTAL_AUM', 0):,.0f}")
-            st.metric("📈 Avg Portfolio", f"${stats.get('AVG_PORTFOLIO_SIZE', 0):,.0f}")
+        if quick_stats and len(quick_stats) > 0:
+            st.metric("👥 Total Clients", f"{quick_stats.get('num_clients', 'N/A'):,}")
+            st.metric("💰 Total AUM", f"${quick_stats.get('aum', 0):,.0f}")
+            avg_portfolio = quick_stats.get("aum", 0) / max(
+                quick_stats.get("num_clients", 1), 1
+            )
+            st.metric("📈 Avg Portfolio", f"${avg_portfolio:,.0f}")
         else:
             st.info("📊 Loading analytics...")
     except Exception:
@@ -1731,31 +1711,32 @@ with tabs[0]:
 
     # Global KPIs Row
     global_kpis = get_global_kpis()
-    if not global_kpis.empty and len(global_kpis) > 0:
-        kpi_data = global_kpis.iloc[0]
+    if global_kpis and len(global_kpis) > 0:
+        kpi_data = global_kpis
 
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.metric(
                 "👥 Total Clients",
-                f"{kpi_data.get('TOTAL_CLIENTS', 0):,}",
+                f"{kpi_data.get('num_clients', 0):,}",
                 delta="+127 this month",
             )
         with col2:
-            st.metric(
-                "💰 Total AUM", f"${kpi_data.get('TOTAL_AUM', 0):,.0f}", delta="+2.3%"
-            )
+            st.metric("💰 Total AUM", f"${kpi_data.get('aum', 0):,.0f}", delta="+2.3%")
         with col3:
+            avg_portfolio = kpi_data.get("aum", 0) / max(
+                kpi_data.get("num_clients", 1), 1
+            )
             st.metric(
                 "📈 Avg Portfolio",
-                f"${kpi_data.get('AVG_PORTFOLIO_SIZE', 0):,.0f}",
+                f"${avg_portfolio:,.0f}",
                 delta="+5.7%",
             )
         with col4:
             st.metric(
-                "⚖️ Risk Distribution",
-                f"{kpi_data.get('TOTAL_BALANCED_CLIENTS', 0):,}",
-                delta="Balanced clients",
+                "👨‍💼 Total Advisors",
+                f"{kpi_data.get('num_advisors', 0):,}",
+                delta="Active advisors",
             )
         with col5:
             st.metric("🎯 Engagement Rate", "87.3%", delta="+3.2%")
