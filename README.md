@@ -1,13 +1,22 @@
-# 🏦 BFSI Wealth 360 - Advanced Analytics Platform
+# 🏦 Wealth 360 Analytics Platform - AI-Native BFSI Solution
 
 [![CI/CD Pipeline](https://github.com/Deepjyoti-ricky/wealth-360-streamlit-snowflake/actions/workflows/ci.yml/badge.svg)](https://github.com/Deepjyoti-ricky/wealth-360-streamlit-snowflake/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Snowflake](https://img.shields.io/badge/Snowflake-Ready-blue.svg)](https://www.snowflake.com/)
+[![Cortex AI](https://img.shields.io/badge/Cortex-AI%20Powered-orange.svg)](https://docs.snowflake.com/en/user-guide/snowflake-cortex)
 
-**AI-native wealth management analytics platform** built for Banking, Financial Services & Insurance (BFSI) organizations. Showcases **Snowflake Cortex AI** capabilities with **Streamlit in Snowflake** for enterprise-ready deployment.
+## 🌟 **Next-Generation Wealth Management Platform**
 
-> 🧠 **Major Update**: **Cortex AI Integration** - Complete redesign featuring Snowflake Cortex AI (AI_COMPLETE, AI_CLASSIFY, AI_SENTIMENT) with professional demo flow for Sales Engineers.
+**Enterprise-grade AI-native analytics platform** designed specifically for **Banking, Financial Services & Insurance (BFSI)** organizations. Demonstrates the full power of **Snowflake Cortex AI** with **professional interactive dashboards**, **geospatial intelligence**, and **real-time risk monitoring**.
+
+### 🚀 **Latest Enhancements - Professional Sales Demo Ready**
+
+> 🧠 **Complete Platform Redesign**: Multi-provider AI integration (Snowflake Cortex, OpenAI, Claude), interactive geospatial intelligence, real-time monitoring dashboards, and comprehensive sidebar controls across all modules.
+
+> 🗺️ **Geospatial Intelligence**: Advanced 3D mapping capabilities with climate risk analysis, flood/wildfire monitoring, and interactive PyDeck visualizations.
+
+> ⚡ **Real-Time Intelligence**: Live alert streams, global activity monitoring, transaction flow visualization, and automated workflow orchestration.
 
 ## ✨ Platform Highlights
 
@@ -18,45 +27,64 @@
 - **⚡ Snowpark-First Architecture** - Native Snowflake deployment with seamless local fallback
 - **🏢 Enterprise-Ready** - Production-grade code quality, CI/CD, and security standards
 
-## 📱 Multi-Page Application Structure
+## 📱 **Professional Multi-Page Architecture**
 
-The application is now organized into 5 specialized pages for optimal user experience:
+The platform features a **comprehensive 5-module architecture** with enhanced sidebar controls and intelligent navigation:
 
-### 🏠 **Main Navigation** (`streamlit_app.py`)
-- **Welcome Dashboard** with platform overview
-- **Enhanced Sidebar** with global filters and quick actions
-- **Navigation Guide** for seamless page transitions
-- **Real-time KPI metrics** in sidebar
+### 🎯 **Business Overview** (`pages/01_🎯_Business_Overview.py`)
+- **🌟 Platform Overview** - Comprehensive introduction with navigation cards
+- **🧠 AI-Generated Executive Summary** - Cortex-powered insights with real-time metrics
+- **🚨 AI-Powered Priority Intelligence** - Smart alert system with gradient tiles
+- **⚙️ Executive Controls** - Auto-refresh, alert thresholds, time range filters
+- **🧭 Quick Navigation** - Direct access to all platform modules
+- **📤 Export Capabilities** - Executive summaries and KPI dashboards
 
-### 📊 **Executive Dashboard** (`pages/01_📊_Executive_Dashboard.py`)
-- **C-Suite KPIs** with real-time metrics and delta indicators
-- **Priority Alerts System** (Critical/Attention Required)
-- **Quick Action Center** for immediate responses
-- **Executive Summary Charts** (AUM trends, segment distribution)
+### 🧠 **AI-Powered Insights** (`pages/02_🧠_AI_Powered_Insights.py`)
+- **🤖 Multi-Provider AI Integration** - Snowflake Cortex, OpenAI, Claude comparison
+- **AI_COMPLETE** - Natural language business queries with 50+ models
+- **AI_CLASSIFY** - Automatic categorization and risk classification
+- **AI_SENTIMENT** - Real-time feedback analysis and sentiment scoring
+- **🔧 AI Configuration** - Temperature controls, token limits, safety settings
+- **📊 Performance Monitoring** - Query tracking, response times, accuracy metrics
+- **🛡️ Compliance Controls** - PII detection, content filtering, regulatory modes
 
-### 👥 **Client Analytics** (`pages/02_👥_Client_Analytics.py`)
-- **Customer 360 & Segmentation** - Single view across portfolios and behavior
-- **Next Best Actions** - AI-driven cross/upsell recommendations
-- **Churn Prevention** - Early warning system with risk scoring
-- **Event-Driven Outreach** - Life event and market timing triggers
-- **Sentiment Analysis** - NLP-style feedback intelligence
+### 📊 **Analytics Deep Dive** (`pages/03_📊_Analytics_Deep_Dive.py`)
+- **🎯 Portfolio Analytics** - Enhanced risk monitoring with professional styling
+- **⚠️ Risk Management** - Portfolio drift alerts, suitability monitoring
+- **📈 Performance Optimization** - Benchmark comparisons, volatility analysis
+- **🔬 Advanced Features** - ML predictions, stress testing, scenario analysis
+- **📊 Comprehensive Filtering** - Portfolio selection, advisor filters, time ranges
+- **🚨 Alert Configuration** - Customizable thresholds and notification settings
 
-### 🎯 **Portfolio Management** (`pages/03_🎯_Portfolio_Management.py`)
-- **Suitability & Risk Alerts** - Portfolio compliance monitoring
-- **Portfolio Drift Analysis** - Asset allocation optimization
-- **Idle Cash Management** - Cash-sweep opportunities
-- **Transaction Anomalies** - Statistical outlier detection
-- **Advisor Performance** - Productivity and coverage metrics
+### ⚡ **Real-Time Intelligence** (`pages/04_⚡_Real_Time_Intelligence.py`)
+- **🚨 Live Alert Streams** - Real-time risk and opportunity detection with auto-refresh
+- **📊 Monitoring Dashboards** - System performance, active connections, data throughput
+- **🌍 Global Intelligence Maps** - Worldwide activity visualization with PyDeck
+- **💰 Transaction Flow Analysis** - Capital movement tracking with arc visualizations
+- **🤖 Automation Controls** - Smart routing, predictive alerts, emergency protocols
+- **⚖️ Real-Time Thresholds** - Configurable risk, volume, and latency alerts
 
-### 🤖 **AI & Automation** (`pages/04_🤖_AI_Automation.py`)
-- **Wealth Narrative Generation** - Auto-generated client summaries
-- **KYC Operations Copilot** - Compliance automation
-- **AI Insights Dashboard** - Usage analytics and performance metrics
-- **Recommendations Engine** - AI-powered business insights
+### 🚀 **Advanced Capabilities** (`pages/05_🚀_Advanced_Capabilities.py`)
+- **🗺️ Geospatial Intelligence** - Interactive 3D mapping with multiple visualization layers
+- **🌡️ Climate Risk Analysis** - Flood, wildfire, and storm pattern monitoring
+- **📊 Advanced Analytics** - Machine learning models and predictive capabilities
+- **🎨 Professional Visualizations** - PyDeck charts with satellite imagery and custom styling
+- **🔬 Data Integration** - Snowflake Marketplace data sources and external APIs
+- **⚡ Performance Optimization** - Real-time computation with intelligent caching
+## 🔧 **Technical Architecture**
 
-### 🌍 **Geographic Insights** (`pages/05_🌍_Geographic_Insights.py`)
-- **Client Distribution Maps** - Interactive 3D visualizations with PyDeck
-- **Climate Risk Analysis** - Weather and environmental risk assessment
+### **🎯 Core Technologies**
+- **Snowflake Data Cloud** - Scalable data warehouse with Cortex AI integration
+- **Streamlit Framework** - Interactive web application with multi-page architecture
+- **PyDeck Visualizations** - Advanced 3D mapping and geospatial analytics
+- **Plotly Dashboards** - Professional interactive charts and metrics
+- **Pandas DataFrames** - Efficient data manipulation and analysis
+
+### **🧠 AI & Machine Learning**
+- **Snowflake Cortex AI** - Native AI functions (AI_COMPLETE, AI_CLASSIFY, AI_SENTIMENT)
+- **Multi-Provider Integration** - OpenAI GPT models, Anthropic Claude support
+- **Real-Time Processing** - Live sentiment analysis and predictive modeling
+- **Enterprise Security** - PII detection, content filtering, compliance controls
 - **Advisor Territory Coverage** - Geographic performance optimization
 - **Market Penetration Analysis** - State-by-state AUM insights
 

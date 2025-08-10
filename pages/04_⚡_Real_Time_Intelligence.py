@@ -17,6 +17,78 @@ import streamlit as st
 
 st.set_page_config(page_title="Real-Time Intelligence", page_icon="⚡", layout="wide")
 
+# Sidebar - Real-Time Configuration & Controls
+st.sidebar.markdown("## ⚡ **Real-Time Controls**")
+
+# Alert Management
+st.sidebar.markdown("### 🚨 **Alert Management**")
+auto_refresh = st.sidebar.checkbox("🔄 Auto Refresh", value=True)
+alert_frequency = st.sidebar.selectbox(
+    "Alert Frequency", ["Real-time", "Every 30s", "Every 1min", "Every 5min"], index=0
+)
+
+alert_priority_filter = st.sidebar.multiselect(
+    "Alert Priority Filter",
+    ["🔴 Critical", "🟡 High", "🟠 Medium", "🟢 Low", "ℹ️ Info"],
+    default=["🔴 Critical", "🟡 High"],
+)
+
+# Monitoring Scope
+st.sidebar.markdown("### 🌍 **Monitoring Scope**")
+monitoring_regions = st.sidebar.multiselect(
+    "Geographic Regions",
+    ["North America", "Europe", "Asia Pacific", "Latin America", "Global"],
+    default=["Global"],
+)
+
+client_segments = st.sidebar.multiselect(
+    "Client Segments",
+    ["High Net Worth", "Ultra High Net Worth", "Institutional", "Retail", "All"],
+    default=["All"],
+)
+
+# Real-Time Thresholds
+st.sidebar.markdown("### ⚖️ **Real-Time Thresholds**")
+risk_alert_threshold = st.sidebar.slider("Risk Alert Level", 0, 100, 75, 5)
+volume_alert_threshold = st.sidebar.slider("Volume Alert (% change)", 0, 500, 150, 25)
+latency_threshold = st.sidebar.slider("Latency Alert (ms)", 100, 5000, 1000, 100)
+
+# System Performance Monitoring
+st.sidebar.markdown("### 📊 **System Performance**")
+system_load = st.sidebar.metric("System Load", "23%", "↘️ -2%")
+active_connections = st.sidebar.metric("Active Connections", "1,247", "↗️ +89")
+data_throughput = st.sidebar.metric("Data Throughput", "12.3 GB/s", "↗️ +1.2")
+
+# Automation Controls
+st.sidebar.markdown("### 🤖 **Automation Controls**")
+enable_auto_response = st.sidebar.checkbox("🤖 Auto Response", value=False)
+enable_smart_routing = st.sidebar.checkbox("🧠 Smart Alert Routing", value=True)
+enable_predictive_alerts = st.sidebar.checkbox("🔮 Predictive Alerts", value=True)
+
+# Emergency Controls
+st.sidebar.markdown("### 🆘 **Emergency Controls**")
+if st.sidebar.button("🛑 Emergency Stop", use_container_width=True, type="secondary"):
+    st.sidebar.warning("Emergency protocols activated!")
+
+if st.sidebar.button("🔄 System Reset", use_container_width=True):
+    st.sidebar.success("System reset completed!")
+
+# Live Data Export
+st.sidebar.markdown("### 📤 **Live Data Export**")
+if st.sidebar.button("📊 Export Live Dashboard", use_container_width=True):
+    st.sidebar.success("Live dashboard exported!")
+
+if st.sidebar.button("🚨 Export Alert Log", use_container_width=True):
+    st.sidebar.success("Alert log exported!")
+
+# Navigation
+st.sidebar.markdown("### 🧭 **Navigation**")
+if st.sidebar.button("📊 Analytics Deep Dive ←", use_container_width=True):
+    st.switch_page("pages/03_📊_Analytics_Deep_Dive.py")
+
+if st.sidebar.button("🚀 Advanced Capabilities →", use_container_width=True):
+    st.switch_page("pages/05_🚀_Advanced_Capabilities.py")
+
 # Custom CSS for real-time styling
 st.markdown(
     """

@@ -18,6 +18,107 @@ from utils.data_functions import get_client_geographic_distribution
 
 st.set_page_config(page_title="Advanced Capabilities", page_icon="🚀", layout="wide")
 
+# Sidebar - Advanced Analytics Configuration
+st.sidebar.markdown("## 🚀 **Advanced Configuration**")
+
+# Geospatial Settings
+st.sidebar.markdown("### 🗺️ **Geospatial Settings**")
+map_style = st.sidebar.selectbox(
+    "Default Map Style",
+    ["Light", "Dark", "Satellite", "Streets", "Outdoors", "Custom"],
+    index=0,
+)
+
+geospatial_precision = st.sidebar.selectbox(
+    "Geospatial Precision",
+    ["City Level", "State Level", "County Level", "ZIP Code Level"],
+    index=1,
+)
+
+enable_3d_visualization = st.sidebar.checkbox("🎯 Enable 3D Visualization", value=True)
+enable_clustering = st.sidebar.checkbox("🔍 Enable Data Clustering", value=True)
+
+# Climate Risk Configuration
+st.sidebar.markdown("### 🌡️ **Climate Risk Settings**")
+climate_risk_models = st.sidebar.multiselect(
+    "Active Risk Models",
+    ["Flood Risk", "Wildfire Risk", "Hurricane Risk", "Drought Risk", "Sea Level Rise"],
+    default=["Flood Risk", "Wildfire Risk"],
+)
+
+risk_time_horizon = st.sidebar.selectbox(
+    "Risk Time Horizon",
+    ["1 Year", "5 Years", "10 Years", "25 Years", "50 Years"],
+    index=2,
+)
+
+climate_scenario = st.sidebar.selectbox(
+    "Climate Scenario",
+    [
+        "Current Conditions",
+        "RCP 2.6 (Best Case)",
+        "RCP 4.5 (Moderate)",
+        "RCP 8.5 (Worst Case)",
+    ],
+    index=1,
+)
+
+# Advanced Analytics Options
+st.sidebar.markdown("### 🔬 **Advanced Analytics**")
+enable_ml_models = st.sidebar.checkbox("🤖 Machine Learning Models", value=True)
+enable_predictive_analytics = st.sidebar.checkbox("🔮 Predictive Analytics", value=True)
+enable_external_data = st.sidebar.checkbox("🌐 External Data Sources", value=True)
+
+# Data Sources Configuration
+st.sidebar.markdown("### 📊 **Data Sources**")
+marketplace_data = st.sidebar.multiselect(
+    "Snowflake Marketplace Data",
+    ["Weather & Environment", "Economic Indicators", "Real Estate", "Demographics"],
+    default=["Weather & Environment"],
+)
+
+# Performance & Optimization
+st.sidebar.markdown("### ⚡ **Performance Settings**")
+computation_mode = st.sidebar.selectbox(
+    "Computation Mode",
+    ["Real-time", "Batch Processing", "Hybrid", "On-Demand"],
+    index=0,
+)
+
+cache_strategy = st.sidebar.selectbox(
+    "Cache Strategy", ["Aggressive", "Balanced", "Conservative", "No Cache"], index=1
+)
+
+# Visualization Controls
+st.sidebar.markdown("### 🎨 **Visualization Controls**")
+color_scheme = st.sidebar.selectbox(
+    "Color Scheme",
+    ["Default", "High Contrast", "Colorblind Friendly", "Custom"],
+    index=0,
+)
+
+animation_speed = st.sidebar.slider("Animation Speed", 0.1, 3.0, 1.0, 0.1)
+detail_level = st.sidebar.slider("Detail Level", 1, 10, 7, 1)
+
+# Export & Integration
+st.sidebar.markdown("### 📤 **Export & Integration**")
+if st.sidebar.button("🗺️ Export Geospatial Report", use_container_width=True):
+    st.sidebar.success("Geospatial report exported!")
+
+if st.sidebar.button("🌡️ Export Climate Analysis", use_container_width=True):
+    st.sidebar.success("Climate analysis exported!")
+
+if st.sidebar.button("🤖 Export ML Insights", use_container_width=True):
+    st.sidebar.success("ML insights exported!")
+
+# Navigation
+st.sidebar.markdown("### 🧭 **Navigation**")
+if st.sidebar.button("⚡ Real-Time Intelligence ←", use_container_width=True):
+    st.switch_page("pages/04_⚡_Real_Time_Intelligence.py")
+
+if st.sidebar.button("🎯 Back to Overview", use_container_width=True):
+    st.switch_page("pages/01_🎯_Business_Overview.py")
+
 # Advanced CSS styling
 st.markdown(
     """

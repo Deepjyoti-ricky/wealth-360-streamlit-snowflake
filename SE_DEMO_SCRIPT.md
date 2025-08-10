@@ -1,22 +1,29 @@
-# 🎯 BFSI Wealth 360 - 15-Minute Sales Engineer Demo Script
+# 🎯 Wealth 360 Analytics Platform - Enhanced Sales Engineer Demo Script
 
 ## 📋 **Demo Overview**
 **Duration**: 15 minutes
-**Audience**: BFSI C-Suite, IT Decision Makers, Data/AI Teams
-**Goal**: Demonstrate Snowflake's AI-native data platform for wealth management
+**Audience**: BFSI C-Suite, IT Decision Makers, Data/AI Teams, Wealth Management Executives
+**Goal**: Showcase **next-generation AI-native wealth management** with comprehensive platform capabilities
+**Version**: 2.0 - Enhanced with Geospatial Intelligence, Real-Time Monitoring & Multi-Provider AI Integration
 
 ---
 
 ## 🎬 **Demo Flow & Script**
 
-### **Minute 0-1: Opening & Context Setting** ⏱️
-**🎯 Key Message**: AI-native wealth management on Snowflake
+### **Minute 0-1: Opening & Platform Introduction** ⏱️
+**🎯 Key Message**: Next-generation AI-native wealth management transformation
 
-> "Good [morning/afternoon] everyone. Today I'm excited to show you how leading wealth management firms are leveraging Snowflake's AI-native data platform to transform client experiences and drive business growth.
+> "Good [morning/afternoon] everyone. Today I'm excited to demonstrate how the **Wealth 360 Analytics Platform** is transforming wealth management with **enterprise-grade AI capabilities**.
 >
-> What you'll see is our **BFSI Wealth 360 Analytics Platform** - a production-ready solution that demonstrates **Snowflake Cortex AI**, **Streamlit in Snowflake**, and **advanced analytics** working together seamlessly."
+> What you'll see is a **comprehensive 5-module platform** featuring **Snowflake Cortex AI**, **multi-provider AI integration** (OpenAI, Claude), **real-time intelligence dashboards**, and **advanced geospatial analytics** - all built natively on Snowflake."
 
 **🖱️ Action**: Open the application to the Business Overview page
+
+**📊 Platform Highlights** (Point to overview section):
+- **$47M AUM protected** through AI-driven alerts
+- **Real-time monitoring** of 450+ client portfolios
+- **Interactive geospatial intelligence** with climate risk analysis
+- **Live multi-provider AI** comparison capabilities
 
 ---
 
@@ -42,12 +49,47 @@
 
 ---
 
-### **Minute 4-8: AI-Powered Insights - Cortex Capabilities** ⏱️
-**🎯 Key Message**: Enterprise AI without complexity
+### **Minute 4-7: AI-Powered Insights - Multi-Provider AI Integration** ⏱️
+**🎯 Key Message**: Enterprise AI choice and flexibility
 
-> "Now let's dive into the AI engine powering these insights - **Snowflake Cortex AI**."
+> "Now let's explore our **AI-Powered Insights module** - featuring **multi-provider AI integration** that gives you choice and flexibility."
 
 **🖱️ Navigation**: Click to "🧠 AI-Powered Insights" page
+
+**🔧 Sidebar Demonstration** (Point to enhanced sidebar):
+> "Notice our comprehensive **AI Configuration panel** - this gives your teams complete control over AI behavior, safety settings, and performance monitoring."
+
+**🤖 Multi-Provider AI Demo**:
+1. **Show Provider Selection**:
+   > "Here's something unique - **real-time comparison** between Snowflake Cortex, OpenAI, and Claude. Watch how different AI providers approach the same wealth management query."
+
+2. **AI_COMPLETE Demo**:
+   > "Let me type: 'Analyze portfolio risk for high net worth clients with climate exposure'"
+   > Point to dynamic response generation and code examples
+
+3. **Performance Metrics**:
+   > "The platform automatically tracks **AI performance metrics** - response times, accuracy scores, and cost optimization across providers."
+
+### **Minute 7-10: Real-Time Intelligence & Geospatial Analytics** ⏱️
+**🎯 Key Message**: Live monitoring and advanced visualization capabilities
+
+**🖱️ Navigation**: Click to "⚡ Real-Time Intelligence" page
+
+**⚡ Real-Time Monitoring Demo**:
+1. **Live Alert Streams**:
+   > "This is **live monitoring** in action - real-time risk detection with auto-refresh capabilities. Notice the priority filtering and geographic scope controls in the sidebar."
+
+2. **Global Intelligence Maps**:
+   > "Here's our **PyDeck-powered global activity map** - showing worldwide client activity patterns in real-time."
+
+**🖱️ Navigation**: Click to "🚀 Advanced Capabilities" page
+
+**🗺️ Geospatial Intelligence Demo**:
+1. **Interactive 3D Mapping**:
+   > "This is where we showcase **advanced geospatial capabilities** - interactive 3D mapping with satellite imagery, climate risk overlays, and wealth distribution analysis."
+
+2. **Climate Risk Analysis**:
+   > "Switch to the Climate Risk tab - we're analyzing **flood risk, wildfire risk, and storm patterns** affecting portfolio locations. This is critical for **ESG compliance** and **risk management**."
 
 **🖱️ Demo Steps**:
 

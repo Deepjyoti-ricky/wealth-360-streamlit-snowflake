@@ -16,11 +16,208 @@ from utils.data_functions import get_customer_360_segments, get_global_kpis
 
 st.set_page_config(page_title="Business Overview", page_icon="🎯", layout="wide")
 
-# Page header
-st.markdown("# 🎯 Business Overview")
-st.caption(
-    "🧠 **AI-Powered Executive Dashboard | Real-time insights with Snowflake Cortex Intelligence**"
+# Sidebar - Executive Controls & Navigation
+st.sidebar.markdown("## 🎯 **Executive Controls**")
+
+# Global Settings Section
+st.sidebar.markdown("### ⚙️ **Dashboard Settings**")
+refresh_interval = st.sidebar.selectbox(
+    "Auto-refresh Interval",
+    ["Manual", "30 seconds", "1 minute", "5 minutes", "15 minutes"],
+    index=2,
 )
+
+show_ai_insights = st.sidebar.checkbox("🧠 Enable AI Insights", value=True)
+show_alerts = st.sidebar.checkbox("🚨 Show Priority Alerts", value=True)
+executive_mode = st.sidebar.checkbox(
+    "👔 Executive Mode", value=True, help="Simplified view for C-suite"
+)
+
+# Time Range Filter
+st.sidebar.markdown("### 📅 **Time Range**")
+time_period = st.sidebar.selectbox(
+    "Analysis Period",
+    ["Last 24 Hours", "Last Week", "Last Month", "Last Quarter", "YTD", "Custom"],
+    index=4,
+)
+
+# Key Metrics Filter
+st.sidebar.markdown("### 📊 **Key Metrics Focus**")
+focus_metrics = st.sidebar.multiselect(
+    "Primary KPIs",
+    [
+        "AUM Growth",
+        "Client Acquisition",
+        "Revenue",
+        "Risk Metrics",
+        "Performance",
+        "Alerts",
+    ],
+    default=["AUM Growth", "Client Acquisition", "Risk Metrics"],
+)
+
+# Alert Threshold Settings
+st.sidebar.markdown("### 🚨 **Alert Thresholds**")
+risk_threshold = st.sidebar.slider("Risk Alert Threshold", 0.0, 100.0, 85.0, 5.0)
+performance_threshold = st.sidebar.slider(
+    "Performance Alert (%)", -10.0, 10.0, -3.0, 0.5
+)
+
+# Quick Navigation
+st.sidebar.markdown("### 🧭 **Quick Navigation**")
+if st.sidebar.button("🧠 AI-Powered Insights →", use_container_width=True):
+    st.switch_page("pages/02_🧠_AI_Powered_Insights.py")
+
+if st.sidebar.button("📊 Analytics Deep Dive →", use_container_width=True):
+    st.switch_page("pages/03_📊_Analytics_Deep_Dive.py")
+
+if st.sidebar.button("⚡ Real-Time Intelligence →", use_container_width=True):
+    st.switch_page("pages/04_⚡_Real_Time_Intelligence.py")
+
+if st.sidebar.button("🚀 Advanced Capabilities →", use_container_width=True):
+    st.switch_page("pages/05_🚀_Advanced_Capabilities.py")
+
+# Export Options
+st.sidebar.markdown("### 📤 **Export Options**")
+if st.sidebar.button("📋 Export Executive Summary", use_container_width=True):
+    st.sidebar.success("Executive summary exported!")
+
+if st.sidebar.button("📈 Export KPI Dashboard", use_container_width=True):
+    st.sidebar.success("KPI dashboard exported!")
+
+# Page header with comprehensive overview
+st.markdown("# 🎯 **Wealth 360 Analytics Platform**")
+st.caption("🧠 **AI-Native BFSI Analytics | Powered by Snowflake Cortex Intelligence**")
+
+# Platform Overview Section
+st.markdown("---")
+with st.container():
+    st.markdown("## 🌟 **Platform Overview**")
+
+    overview_col1, overview_col2, overview_col3 = st.columns([2, 2, 1])
+
+    with overview_col1:
+        st.markdown(
+            """
+        **🏦 Enterprise Wealth Management Platform**
+
+        The Wealth 360 Analytics Platform represents the next generation of **BFSI analytics**,
+        combining **Snowflake Data Cloud** capabilities with **Cortex AI** to deliver unprecedented
+        insights for wealth management operations.
+
+        **✨ Key Capabilities:**
+        • **Real-time AI-powered insights** with Snowflake Cortex
+        • **360-degree client analytics** and portfolio management
+        • **Geospatial risk analysis** with climate intelligence
+        • **Advanced predictive modeling** and automation
+        • **Regulatory compliance** and risk monitoring
+        """
+        )
+
+    with overview_col2:
+        st.markdown(
+            """
+        **🎯 Business Value Delivered**
+
+        • **$47M AUM** protected through AI-driven risk alerts
+        • **23% improvement** in client retention rates
+        • **67% faster** compliance reporting cycles
+        • **85% reduction** in manual portfolio rebalancing
+        • **Real-time monitoring** of 450+ client portfolios
+
+        **🚀 Platform Navigation:**
+
+        Navigate through our **5 core modules** designed for different stakeholder needs:
+        """
+        )
+
+    with overview_col3:
+        # Platform status indicators
+        st.markdown("**🔄 System Status**")
+        st.success("🟢 AI Engine: Online")
+        st.success("🟢 Data Pipeline: Active")
+        st.success("🟢 Real-time Feeds: Connected")
+        st.info(f"🕐 Last Updated: {time_period}")
+
+        st.markdown("**📊 Live Metrics**")
+        st.metric("Active Sessions", "127", "↗️ +12")
+        st.metric("AI Queries/min", "43", "↗️ +7")
+        st.metric("System Load", "23%", "↘️ -5%")
+
+# Navigation Cards Section
+st.markdown("---")
+st.markdown("## 🧭 **Platform Navigation**")
+
+nav_col1, nav_col2 = st.columns(2)
+
+with nav_col1:
+    # AI & Analytics Navigation
+    st.markdown(
+        """
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin: 10px 0;">
+        <h3 style="color: white; margin: 0;">🧠 AI-Powered Intelligence</h3>
+        <p style="color: #f0f0f0; margin: 10px 0;">Live Snowflake Cortex AI demonstrations and natural language processing</p>
+        <ul style="color: #f0f0f0; margin: 10px 0;">
+            <li><strong>AI_COMPLETE:</strong> Natural language business queries</li>
+            <li><strong>AI_CLASSIFY:</strong> Automatic categorization</li>
+            <li><strong>AI_SENTIMENT:</strong> Real-time feedback analysis</li>
+            <li><strong>Multi-Provider AI:</strong> OpenAI, Claude, Cortex comparison</li>
+        </ul>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; border-radius: 10px; margin: 10px 0;">
+        <h3 style="color: white; margin: 0;">⚡ Real-Time Intelligence</h3>
+        <p style="color: #f0f0f0; margin: 10px 0;">Live monitoring dashboards and automated workflows</p>
+        <ul style="color: #f0f0f0; margin: 10px 0;">
+            <li><strong>Live Alerts:</strong> Real-time risk and opportunity detection</li>
+            <li><strong>Global Intelligence:</strong> Worldwide activity mapping</li>
+            <li><strong>Transaction Flow:</strong> Capital movement visualization</li>
+            <li><strong>AI Automation:</strong> Intelligent workflow orchestration</li>
+        </ul>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+with nav_col2:
+    st.markdown(
+        """
+    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 10px; margin: 10px 0;">
+        <h3 style="color: white; margin: 0;">📊 Analytics Deep Dive</h3>
+        <p style="color: #f0f0f0; margin: 10px 0;">Advanced portfolio and risk analytics with AI insights</p>
+        <ul style="color: #f0f0f0; margin: 10px 0;">
+            <li><strong>Portfolio Management:</strong> AI-enhanced optimization</li>
+            <li><strong>Risk Monitoring:</strong> Real-time drift detection</li>
+            <li><strong>Performance Analytics:</strong> Benchmark comparisons</li>
+            <li><strong>Client 360:</strong> Comprehensive client insights</li>
+        </ul>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+    <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 20px; border-radius: 10px; margin: 10px 0;">
+        <h3 style="color: white; margin: 0;">🚀 Advanced Capabilities</h3>
+        <p style="color: #f0f0f0; margin: 10px 0;">Geospatial analytics and climate risk intelligence</p>
+        <ul style="color: #f0f0f0; margin: 10px 0;">
+            <li><strong>Geospatial Intelligence:</strong> Interactive 3D mapping</li>
+            <li><strong>Climate Risk:</strong> Environmental impact analysis</li>
+            <li><strong>Predictive Models:</strong> Machine learning insights</li>
+            <li><strong>Market Intelligence:</strong> External data integration</li>
+        </ul>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("---")
 
 # AI-Powered Executive Summary
 st.markdown("### 🧠 **AI-Generated Executive Summary**")

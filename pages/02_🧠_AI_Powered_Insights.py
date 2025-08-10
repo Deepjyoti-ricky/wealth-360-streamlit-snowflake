@@ -15,6 +15,63 @@ from utils.data_functions import get_sentiment_analysis
 
 st.set_page_config(page_title="AI-Powered Insights", page_icon="🧠", layout="wide")
 
+# Sidebar - AI Configuration & Settings
+st.sidebar.markdown("## 🧠 **AI Configuration**")
+
+# AI Model Settings
+st.sidebar.markdown("### 🤖 **Model Settings**")
+default_temperature = st.sidebar.slider(
+    "AI Temperature", 0.0, 1.0, 0.3, 0.1, help="Controls creativity vs accuracy"
+)
+max_tokens = st.sidebar.slider("Max Response Tokens", 100, 2000, 500, 50)
+use_context = st.sidebar.checkbox("📚 Use Business Context", value=True)
+
+# AI Provider Preferences
+st.sidebar.markdown("### 🔧 **Provider Preferences**")
+preferred_provider = st.sidebar.selectbox(
+    "Preferred AI Provider",
+    ["🟦 Snowflake Cortex", "🟢 OpenAI", "🟣 Anthropic Claude", "⚡ Auto-Select Best"],
+    index=0,
+)
+
+show_technical_details = st.sidebar.checkbox("🔍 Show Technical Details", value=False)
+show_performance_metrics = st.sidebar.checkbox(
+    "📊 Show Performance Metrics", value=True
+)
+
+# AI Safety & Compliance
+st.sidebar.markdown("### 🛡️ **AI Safety & Compliance**")
+enable_content_filter = st.sidebar.checkbox("🛡️ Content Filtering", value=True)
+enable_pii_detection = st.sidebar.checkbox("🔒 PII Detection", value=True)
+compliance_mode = st.sidebar.selectbox(
+    "Compliance Mode", ["Standard", "GDPR", "Financial Services", "Healthcare"], index=2
+)
+
+# Real-time AI Monitoring
+st.sidebar.markdown("### 📊 **Real-time AI Monitoring**")
+ai_queries_today = st.sidebar.metric("AI Queries Today", "1,247", "↗️ +89")
+avg_response_time = st.sidebar.metric("Avg Response Time", "1.3s", "↘️ -0.2s")
+ai_accuracy_score = st.sidebar.metric("AI Accuracy Score", "94.7%", "↗️ +1.2%")
+
+# Quick AI Actions
+st.sidebar.markdown("### ⚡ **Quick AI Actions**")
+if st.sidebar.button("🔄 Reset AI Context", use_container_width=True):
+    st.sidebar.success("AI context reset!")
+
+if st.sidebar.button("📊 Generate AI Report", use_container_width=True):
+    st.sidebar.success("AI report generated!")
+
+if st.sidebar.button("🎯 Optimize AI Settings", use_container_width=True):
+    st.sidebar.success("AI settings optimized!")
+
+# Navigation
+st.sidebar.markdown("### 🧭 **Navigation**")
+if st.sidebar.button("🎯 Business Overview ←", use_container_width=True):
+    st.switch_page("pages/01_🎯_Business_Overview.py")
+
+if st.sidebar.button("📊 Analytics Deep Dive →", use_container_width=True):
+    st.switch_page("pages/03_📊_Analytics_Deep_Dive.py")
+
 # Page header
 st.markdown("# 🧠 AI-Powered Insights")
 st.caption(

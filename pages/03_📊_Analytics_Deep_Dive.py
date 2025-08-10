@@ -21,6 +21,83 @@ from utils.data_functions import (
 
 st.set_page_config(page_title="Analytics Deep Dive", page_icon="📊", layout="wide")
 
+# Sidebar - Analytics Configuration & Filters
+st.sidebar.markdown("## 📊 **Analytics Configuration**")
+
+# Portfolio Filters
+st.sidebar.markdown("### 🎯 **Portfolio Filters**")
+selected_portfolios = st.sidebar.multiselect(
+    "Select Portfolios",
+    ["All Portfolios", "Growth", "Conservative", "Balanced", "Aggressive", "Income"],
+    default=["All Portfolios"],
+)
+
+advisor_filter = st.sidebar.selectbox(
+    "Filter by Advisor",
+    ["All Advisors", "Top Performers", "New Advisors", "High Risk", "Custom"],
+    index=0,
+)
+
+# Risk Analysis Settings
+st.sidebar.markdown("### ⚠️ **Risk Analysis Settings**")
+risk_tolerance = st.sidebar.slider("Risk Tolerance Threshold", 0.0, 10.0, 7.5, 0.5)
+drift_threshold = st.sidebar.slider("Portfolio Drift Alert (%)", 1.0, 20.0, 5.0, 1.0)
+volatility_window = st.sidebar.selectbox(
+    "Volatility Analysis Window", ["1 Month", "3 Months", "6 Months", "1 Year"], index=2
+)
+
+# Performance Benchmarks
+st.sidebar.markdown("### 📈 **Performance Benchmarks**")
+primary_benchmark = st.sidebar.selectbox(
+    "Primary Benchmark",
+    ["S&P 500", "NASDAQ", "Russell 2000", "MSCI World", "Custom Blend"],
+    index=0,
+)
+
+comparison_period = st.sidebar.selectbox(
+    "Comparison Period",
+    ["1 Week", "1 Month", "3 Months", "6 Months", "1 Year", "3 Years"],
+    index=4,
+)
+
+# Alert Configuration
+st.sidebar.markdown("### 🚨 **Alert Configuration**")
+enable_drift_alerts = st.sidebar.checkbox("🎯 Portfolio Drift Alerts", value=True)
+enable_performance_alerts = st.sidebar.checkbox("📈 Performance Alerts", value=True)
+enable_risk_alerts = st.sidebar.checkbox("⚠️ Risk Level Alerts", value=True)
+enable_compliance_alerts = st.sidebar.checkbox("📋 Compliance Alerts", value=True)
+
+# Real-time Analytics Monitoring
+st.sidebar.markdown("### 📊 **Analytics Monitoring**")
+portfolios_analyzed = st.sidebar.metric("Portfolios Analyzed", "892", "↗️ +47")
+avg_analysis_time = st.sidebar.metric("Avg Analysis Time", "0.8s", "↘️ -0.1s")
+active_alerts = st.sidebar.metric("Active Alerts", "23", "↗️ +5")
+
+# Advanced Analytics Options
+st.sidebar.markdown("### 🔬 **Advanced Analytics**")
+enable_ml_predictions = st.sidebar.checkbox("🤖 ML Predictions", value=True)
+enable_stress_testing = st.sidebar.checkbox("⚡ Stress Testing", value=False)
+enable_scenario_analysis = st.sidebar.checkbox("🎭 Scenario Analysis", value=False)
+
+# Export & Reporting
+st.sidebar.markdown("### 📤 **Export & Reporting**")
+if st.sidebar.button("📊 Export Analytics Report", use_container_width=True):
+    st.sidebar.success("Analytics report exported!")
+
+if st.sidebar.button("📈 Export Performance Data", use_container_width=True):
+    st.sidebar.success("Performance data exported!")
+
+if st.sidebar.button("🚨 Export Alert Summary", use_container_width=True):
+    st.sidebar.success("Alert summary exported!")
+
+# Navigation
+st.sidebar.markdown("### 🧭 **Navigation**")
+if st.sidebar.button("🧠 AI-Powered Insights ←", use_container_width=True):
+    st.switch_page("pages/02_🧠_AI_Powered_Insights.py")
+
+if st.sidebar.button("⚡ Real-Time Intelligence →", use_container_width=True):
+    st.switch_page("pages/04_⚡_Real_Time_Intelligence.py")
+
 # Custom CSS for professional styling
 st.markdown(
     """
