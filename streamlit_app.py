@@ -1233,7 +1233,7 @@ def get_advisor_territory_coverage() -> pd.DataFrame:
             JOIN CLIENTS c ON acr.CLIENT_ID = c.CLIENT_ID
             LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
             WHERE c.STATE IS NOT NULL
-            GROUP BY 1, 2, 3, 4, 5, 6, 7, 9
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 10
         ),
         territory_metrics AS (
             SELECT ag.ADVISOR_ID, ag.ADVISOR_NAME, ag.SPECIALIZATION,
@@ -1380,7 +1380,7 @@ def get_advisor_location_details() -> pd.DataFrame:
             FROM ADVISORS a
             LEFT JOIN ADVISOR_CLIENT_RELATIONSHIPS acr ON a.ADVISOR_ID = acr.ADVISOR_ID
             LEFT JOIN client_portfolio_values cpv ON acr.CLIENT_ID = cpv.CLIENT_ID
-            GROUP BY 1, 2, 3, 4
+            GROUP BY 1, 2, 3, 4, 7
         ),
         region_coordinates AS (
             SELECT 'California' AS REGION, 36.116203 AS LATITUDE, -119.681564 AS LONGITUDE
