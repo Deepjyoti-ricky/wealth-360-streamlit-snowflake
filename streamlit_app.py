@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 def _read_secrets_prefixed(prefix: str) -> Dict[str, Optional[str]]:
     """
     Read configuration secrets with a given prefix.
+    Safe for use in both Streamlit in Snowflake and local environments.
 
     Args:
         prefix: Configuration section prefix (e.g., 'SNOWFLAKE')
@@ -45,22 +46,36 @@ def _read_secrets_prefixed(prefix: str) -> Dict[str, Optional[str]]:
     values: Dict[str, Optional[str]] = {}
 
     def get_val(key: str) -> Optional[str]:
-        try:
-            # Try Streamlit secrets first
-            if hasattr(st, "secrets"):
-                # Try both upper and lower keys: SNOWFLAKE / snowflake
-                if prefix in st.secrets:
-                    section = st.secrets[prefix]
-                    return section.get(key)
-                if prefix.lower() in st.secrets:
-                    section = st.secrets[prefix.lower()]
-                    return section.get(key)
-        except Exception:
-            # Silently ignore secrets access errors
-            pass
+        # First try environment variables (always safe)
+        env_val = os.environ.get(f"{prefix}_{key}")
+        if env_val:
+            return env_val
 
-        # Fall back to environment variables
-        return os.environ.get(f"{prefix}_{key}")
+        # Only try Streamlit secrets if we're in a local development environment
+        # Skip secrets entirely in Streamlit in Snowflake to avoid errors
+        try:
+            # Check if we're likely in Streamlit in Snowflake by looking for active session
+            from snowflake.snowpark.context import get_active_session
+
+            get_active_session()
+            # If we get here without exception, we're in Streamlit in Snowflake
+            # Don't try to access secrets
+            return None
+        except Exception:
+            # We're in local development, try secrets
+            try:
+                if hasattr(st, "secrets"):
+                    if prefix in st.secrets:
+                        section = st.secrets[prefix]
+                        return section.get(key)
+                    if prefix.lower() in st.secrets:
+                        section = st.secrets[prefix.lower()]
+                        return section.get(key)
+            except Exception:
+                # Secrets not available or accessible
+                pass
+
+        return None
 
     for key in [
         "USER",
@@ -93,27 +108,9 @@ def get_snowflake_session() -> Session:
         if sess is not None:
             logger.info("✅ Using active Snowflake session from Streamlit in Snowflake")
 
-            # Try to apply context overrides from secrets if available
-            try:
-                cfg = _read_secrets_prefixed("SNOWFLAKE")
-                if cfg.get("DATABASE"):
-                    sess.use_database(cfg["DATABASE"])
-                    logger.info(f"Switched to database: {cfg['DATABASE']}")
-                if cfg.get("SCHEMA"):
-                    sess.use_schema(cfg["SCHEMA"])
-                    logger.info(f"Switched to schema: {cfg['SCHEMA']}")
-                if cfg.get("WAREHOUSE"):
-                    sess.use_warehouse(cfg["WAREHOUSE"])
-                    logger.info(f"Switched to warehouse: {cfg['WAREHOUSE']}")
-                if cfg.get("ROLE"):
-                    sess.use_role(cfg["ROLE"])
-                    logger.info(f"Switched to role: {cfg['ROLE']}")
-            except Exception as e:
-                logger.info(
-                    f"No context overrides applied (using current session context): {e}"
-                )
-                # This is fine - we'll use the current session context
-                pass
+            # For Streamlit in Snowflake, use the current session context as-is
+            # Context overrides are optional and only used for local development
+            logger.info("Using current session context from Streamlit in Snowflake")
 
             return sess
     except Exception as e:
