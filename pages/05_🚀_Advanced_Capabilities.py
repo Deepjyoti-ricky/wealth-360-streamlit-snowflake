@@ -936,7 +936,8 @@ with advanced_tabs[4]:
     ]
     colors = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#feca57"]
 
-    for i, (layer, color) in enumerate(zip(layers, colors)):
+    # Create architecture stack visualization
+    for layer, color in zip(layers, colors):
         fig.add_trace(
             go.Bar(
                 name=layer,
@@ -944,7 +945,7 @@ with advanced_tabs[4]:
                 y=[1],
                 marker_color=color,
                 text=layer,
-                textposition="inside",
+                textposition="auto",
                 showlegend=False,
             )
         )
