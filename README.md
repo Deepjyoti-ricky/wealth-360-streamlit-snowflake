@@ -100,14 +100,39 @@ cd wealth-360-streamlit-snowflake
 # 2. Environment Setup
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
 
-# 3. Configure Secrets
+# 3. Install Dependencies (Automated)
+python install_dependencies.py
+
+# OR Manual Installation:
+# pip install --upgrade pip
+# pip install -r requirements.txt
+
+# 4. Configure Secrets (Local Development Only)
 cp .streamlit/secrets.example.toml .streamlit/secrets.toml
 # Edit with your Snowflake credentials
 
-# 4. Launch Application
+# 5. Launch Application
 streamlit run streamlit_app.py
+```
+
+**🚨 Troubleshooting Dependencies:**
+
+If you encounter `ModuleNotFoundError: No module named 'plotly'`:
+
+```bash
+# Option 1: Use automated installer
+python install_dependencies.py
+
+# Option 2: Manual installation
+pip install --upgrade pip
+pip install plotly>=5.24.0 streamlit>=1.37.0 pandas>=2.2.0
+
+# Option 3: Force reinstall
+pip uninstall -y plotly && pip install plotly>=5.24.0
+
+# Verify installation
+python -c "import plotly; print(f'Plotly {plotly.__version__} installed successfully')"
 ```
 
 ## 🛠️ Advanced Technical Features
