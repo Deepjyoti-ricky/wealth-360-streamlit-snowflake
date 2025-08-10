@@ -44,7 +44,7 @@ CLIENTS                      # Demographics, risk profiles, financial goals
 
 ### Streamlit in Snowflake (Recommended)
 
-1. Upload `wealth360.py` to Snowflake
+1. Upload `streamlit_app.py` to Snowflake
 2. Optionally set context overrides in Snowsight secrets:
    ```toml
    [SNOWFLAKE]
@@ -74,7 +74,7 @@ CLIENTS                      # Demographics, risk profiles, financial goals
 
 3. **Run Application**
    ```bash
-   streamlit run wealth360.py
+   streamlit run streamlit_app.py
    ```
 
 ## 🛠️ Development
@@ -93,7 +93,7 @@ pre-commit install
 # Run quality checks
 black .                    # Code formatting
 flake8 .                  # Linting
-mypy wealth360.py         # Type checking
+mypy streamlit_app.py         # Type checking
 bandit -r .               # Security scanning
 ```
 
@@ -128,7 +128,7 @@ python -c "import streamlit, pandas, plotly; print('✅ Success')"
 ### Core Functions
 
 ```python
-# wealth360.py - Main application functions
+# streamlit_app.py - Main application functions
 get_snowflake_session() -> Session
     """Get authenticated Snowpark session"""
 

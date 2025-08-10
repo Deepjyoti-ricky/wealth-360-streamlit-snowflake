@@ -47,7 +47,7 @@ jobs:
 
       - name: Type checking
         run: |
-          mypy wealth360.py --ignore-missing-imports
+          mypy streamlit_app.py --ignore-missing-imports
 
       - name: Security scan
         run: |
