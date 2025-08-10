@@ -708,17 +708,17 @@ def get_portfolio_drift_analysis() -> pd.DataFrame:
         ),
         target_allocations AS (
             SELECT 'Conservative' AS STRATEGY_TYPE, 'Equities' AS ASSET_CLASS, 30 AS TARGET_PCT
-            UNION ALL SELECT 'Conservative', 'Fixed Income', 60, 10
-            UNION ALL SELECT 'Conservative', 'Cash', 10, 0
-            UNION ALL SELECT 'Balanced', 'Equities', 50, 30
-            UNION ALL SELECT 'Balanced', 'Fixed Income', 40, 10
-            UNION ALL SELECT 'Balanced', 'Cash', 10, 0
-            UNION ALL SELECT 'Growth', 'Equities', 70, 30
-            UNION ALL SELECT 'Growth', 'Fixed Income', 25, 5
-            UNION ALL SELECT 'Growth', 'Cash', 5, 0
-            UNION ALL SELECT 'Aggressive Growth', 'Equities', 85, 15
-            UNION ALL SELECT 'Aggressive Growth', 'Fixed Income', 10, 5
-            UNION ALL SELECT 'Aggressive Growth', 'Cash', 5, 0
+            UNION ALL SELECT 'Conservative', 'Fixed Income', 60
+            UNION ALL SELECT 'Conservative', 'Cash', 10
+            UNION ALL SELECT 'Balanced', 'Equities', 50
+            UNION ALL SELECT 'Balanced', 'Fixed Income', 40
+            UNION ALL SELECT 'Balanced', 'Cash', 10
+            UNION ALL SELECT 'Growth', 'Equities', 70
+            UNION ALL SELECT 'Growth', 'Fixed Income', 25
+            UNION ALL SELECT 'Growth', 'Cash', 5
+            UNION ALL SELECT 'Aggressive Growth', 'Equities', 85
+            UNION ALL SELECT 'Aggressive Growth', 'Fixed Income', 10
+            UNION ALL SELECT 'Aggressive Growth', 'Cash', 5
         )
         SELECT ca.PORTFOLIO_ID, ca.STRATEGY_TYPE, ca.ASSET_CLASS,
                ROUND(ca.CURRENT_VALUE / ca.TOTAL_PORTFOLIO_VALUE * 100, 2) AS CURRENT_PCT,
