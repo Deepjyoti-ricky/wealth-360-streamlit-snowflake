@@ -202,11 +202,19 @@ def get_global_kpis() -> Dict[str, Any]:
     """
     # Clients
     clients_df = run_query("SELECT COUNT(DISTINCT CLIENT_ID) AS CNT FROM CLIENTS")
-    num_clients = int(clients_df.loc[0, "CNT"]) if not clients_df.empty else 0
+    num_clients = (
+        int(clients_df.loc[0, "CNT"])
+        if not clients_df.empty and "CNT" in clients_df.columns
+        else 0
+    )
 
     # Advisors
     advisors_df = run_query("SELECT COUNT(DISTINCT ADVISOR_ID) AS CNT FROM ADVISORS")
-    num_advisors = int(advisors_df.loc[0, "CNT"]) if not advisors_df.empty else 0
+    num_advisors = (
+        int(advisors_df.loc[0, "CNT"])
+        if not advisors_df.empty and "CNT" in advisors_df.columns
+        else 0
+    )
 
     # AUM (latest non-cash market value across all portfolios)
     aum_sql = """
@@ -222,7 +230,11 @@ def get_global_kpis() -> Dict[str, Any]:
         WHERE ph.TICKER <> 'CASH'
     """
     aum_df = run_query(aum_sql)
-    aum = float(aum_df.loc[0, "AUM"]) if not aum_df.empty else 0.0
+    aum = (
+        float(aum_df.loc[0, "AUM"])
+        if not aum_df.empty and "AUM" in aum_df.columns
+        else 0.0
+    )
 
     # YTD growth (verified query style)
     ytd_sql = """
@@ -261,7 +273,11 @@ def get_global_kpis() -> Dict[str, Any]:
     """
     ytd_df = run_query(ytd_sql)
     ytd_growth_pct = (
-        float(ytd_df.loc[0, "YTD_GROWTH_PCT"]) if not ytd_df.empty else None
+        float(ytd_df.loc[0, "YTD_GROWTH_PCT"])
+        if not ytd_df.empty
+        and "YTD_GROWTH_PCT" in ytd_df.columns
+        and pd.notna(ytd_df.loc[0, "YTD_GROWTH_PCT"])
+        else None
     )
 
     return {
@@ -446,7 +462,7 @@ def get_suitability_mismatches() -> pd.DataFrame:
 
 
 def get_concentration_breaches(threshold_pct: float = 0.3) -> pd.DataFrame:
-    sql = """
+    sql = f"""
         WITH latest AS (
             SELECT PORTFOLIO_ID, MAX(TIMESTAMP) AS MAX_TS
             FROM POSITION_HISTORY
