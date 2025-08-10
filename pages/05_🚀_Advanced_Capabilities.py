@@ -140,12 +140,12 @@ with cap_col4:
     st.markdown(
         """
     <div class="capability-card">
-        <h4>🛒 Marketplace Integration</h4>
+        <h4>🎯 Advanced Analytics</h4>
         <ul style="text-align: left;">
-            <li>External Data Sources</li>
-            <li>Real-time Data Feeds</li>
-            <li>Third-party Analytics</li>
-            <li>Data Enrichment</li>
+            <li>Real-time Monitoring</li>
+            <li>Interactive Dashboards</li>
+            <li>Custom Visualizations</li>
+            <li>Performance Optimization</li>
         </ul>
     </div>
     """,
@@ -160,8 +160,6 @@ advanced_tabs = st.tabs(
         "🌍 Geospatial Intelligence",
         "🌡️ Climate Risk Analysis",
         "🔮 Predictive Analytics",
-        "🛒 Marketplace Integration",
-        "🏗️ Technical Architecture",
     ]
 )
 
@@ -744,222 +742,6 @@ with advanced_tabs[2]:
         """
         )
 
-# Marketplace Integration
-with advanced_tabs[3]:
-    st.markdown("### 🛒 **Snowflake Marketplace Integration**")
-
-    # Marketplace overview
-    market_col1, market_col2, market_col3 = st.columns(3)
-
-    with market_col1:
-        st.markdown(
-            """
-        <div class="marketplace-card">
-            <h4>📦 Data Products</h4>
-            <h2>47</h2>
-            <p>Integrated datasets</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    with market_col2:
-        st.markdown(
-            """
-        <div class="tech-stack-card">
-            <h4>🔄 Real-time Feeds</h4>
-            <h2>12</h2>
-            <p>Live data streams</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    with market_col3:
-        st.markdown(
-            """
-        <div class="prediction-card">
-            <h4>💡 Data Enrichment</h4>
-            <h2>89%</h2>
-            <p>Coverage improvement</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    # Marketplace data sources
-    st.markdown("**📊 Integrated Data Sources**")
-
-    data_sources = {
-        "Category": [
-            "Financial Markets",
-            "Weather & Climate",
-            "Demographics",
-            "Economic Indicators",
-            "Alternative Data",
-        ],
-        "Providers": [8, 6, 4, 7, 12],
-        "Update Frequency": ["Real-time", "Hourly", "Daily", "Daily", "Mixed"],
-    }
-
-    # Create a comprehensive data source visualization
-    fig = px.sunburst(
-        values=[8, 6, 4, 7, 12],
-        names=data_sources["Category"],
-        title="Marketplace Data Sources Distribution",
-    )
-    fig.update_layout(height=500)
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Key marketplace integrations
-    st.markdown("**🔗 Key Integrations**")
-
-    integration_col1, integration_col2 = st.columns(2)
-
-    with integration_col1:
-        st.markdown(
-            """
-        **🌡️ Weather & Environment**
-        • National Weather Service data
-        • Climate risk assessments
-        • Environmental impact scoring
-        • Natural disaster tracking
-
-        **📈 Financial Market Data**
-        • Real-time stock prices
-        • Market volatility indices
-        • Economic indicators
-        • Sector performance metrics
-        """
-        )
-
-    with integration_col2:
-        st.markdown(
-            """
-        **👥 Demographics & Lifestyle**
-        • Census data integration
-        • Lifestyle segmentation
-        • Income distribution
-        • Education levels
-
-        **🏢 Business Intelligence**
-        • Industry classifications
-        • Company financial data
-        • Economic forecasts
-        • Regulatory updates
-        """
-        )
-
-# Technical Architecture
-with advanced_tabs[4]:
-    st.markdown("### 🏗️ **Technical Architecture**")
-
-    # Architecture overview
-    arch_col1, arch_col2, arch_col3 = st.columns(3)
-
-    with arch_col1:
-        st.markdown(
-            """
-        <div class="tech-stack-card">
-            <h4>☁️ Cloud Native</h4>
-            <p>100% Snowflake-based architecture</p>
-            <p>Auto-scaling compute</p>
-            <p>Zero-copy data sharing</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    with arch_col2:
-        st.markdown(
-            """
-        <div class="marketplace-card">
-            <h4>🔒 Security & Governance</h4>
-            <p>End-to-end encryption</p>
-            <p>Role-based access control</p>
-            <p>Data lineage tracking</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    with arch_col3:
-        st.markdown(
-            """
-        <div class="prediction-card">
-            <h4>⚡ Performance</h4>
-            <p>Sub-second query response</p>
-            <p>Unlimited concurrent users</p>
-            <p>Real-time data processing</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    # Technology stack
-    st.markdown("**🛠️ Technology Stack**")
-
-    tech_stack = {
-        "Layer": [
-            "Presentation",
-            "Application",
-            "Data Processing",
-            "Storage",
-            "External",
-        ],
-        "Technologies": [
-            "Streamlit in Snowflake, React Components",
-            "Python, Snowpark, Cortex AI",
-            "Snowflake Compute, Apache Spark",
-            "Snowflake Data Cloud, Time Travel",
-            "Marketplace Data, APIs, Real-time Feeds",
-        ],
-        "Benefits": [
-            "Zero deployment complexity",
-            "Native AI integration",
-            "Elastic scaling",
-            "Built-in governance",
-            "Rich data ecosystem",
-        ],
-    }
-
-    # Create architecture diagram using Plotly
-    fig = go.Figure()
-
-    # Add architecture layers
-    layers = [
-        "External Data",
-        "Snowflake Storage",
-        "Data Processing",
-        "Application Layer",
-        "Presentation",
-    ]
-    colors = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#feca57"]
-
-    # Create architecture stack visualization
-    for layer, color in zip(layers, colors):
-        fig.add_trace(
-            go.Bar(
-                name=layer,
-                x=[layer],
-                y=[1],
-                marker_color=color,
-                text=layer,
-                textposition="auto",
-                showlegend=False,
-            )
-        )
-
-    fig.update_layout(
-        title="Platform Architecture Stack",
-        xaxis_title="Architecture Layers",
-        yaxis_title="",
-        showlegend=False,
-        height=300,
-        yaxis=dict(showticklabels=False),
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
 
 # Platform ROI and Business Value
 st.divider()
