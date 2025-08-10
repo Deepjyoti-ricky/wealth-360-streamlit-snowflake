@@ -44,16 +44,22 @@ def _read_secrets_prefixed(prefix: str) -> Dict[str, Optional[str]]:
     """
     values: Dict[str, Optional[str]] = {}
 
-    # Prefer Streamlit secrets if available, fall back to environment variables
     def get_val(key: str) -> Optional[str]:
-        if "secrets" in st.__dict__:
-            # Try both upper and lower keys: SNOWFLAKE / snowflake
-            if prefix in st.secrets:
-                section = st.secrets[prefix]
-                return section.get(key)
-            if prefix.lower() in st.secrets:
-                section = st.secrets[prefix.lower()]
-                return section.get(key)
+        try:
+            # Try Streamlit secrets first
+            if hasattr(st, "secrets"):
+                # Try both upper and lower keys: SNOWFLAKE / snowflake
+                if prefix in st.secrets:
+                    section = st.secrets[prefix]
+                    return section.get(key)
+                if prefix.lower() in st.secrets:
+                    section = st.secrets[prefix.lower()]
+                    return section.get(key)
+        except Exception:
+            # Silently ignore secrets access errors
+            pass
+
+        # Fall back to environment variables
         return os.environ.get(f"{prefix}_{key}")
 
     for key in [
@@ -85,10 +91,11 @@ def get_snowflake_session() -> Session:
     try:
         sess = get_active_session()
         if sess is not None:
-            logger.info("Using active Snowflake session from Streamlit in Snowflake")
-            # Optionally align db/schema from secrets if provided
-            cfg = _read_secrets_prefixed("SNOWFLAKE")
+            logger.info("✅ Using active Snowflake session from Streamlit in Snowflake")
+
+            # Try to apply context overrides from secrets if available
             try:
+                cfg = _read_secrets_prefixed("SNOWFLAKE")
                 if cfg.get("DATABASE"):
                     sess.use_database(cfg["DATABASE"])
                     logger.info(f"Switched to database: {cfg['DATABASE']}")
@@ -102,25 +109,39 @@ def get_snowflake_session() -> Session:
                     sess.use_role(cfg["ROLE"])
                     logger.info(f"Switched to role: {cfg['ROLE']}")
             except Exception as e:
-                logger.warning(f"Could not change context: {e}")
-                # Ignore if not permitted to change context
+                logger.info(
+                    f"No context overrides applied (using current session context): {e}"
+                )
+                # This is fine - we'll use the current session context
                 pass
+
             return sess
     except Exception as e:
-        logger.info(f"Active session not available: {e}")
+        logger.info(f"Active session not available, trying credentials: {e}")
 
     # 2) Local/dev fallback via secrets (requires full creds)
     logger.info("Attempting local session with credentials")
-    cfg = _read_secrets_prefixed("SNOWFLAKE")
-    required = ["USER", "PASSWORD", "ACCOUNT", "WAREHOUSE", "DATABASE", "SCHEMA"]
-    missing = [k for k in required if not cfg.get(k)]
-    if missing:
-        error_msg = (
-            "Snowflake session not available and missing local secrets: "
-            + ", ".join(missing)
-        )
-        logger.error(error_msg)
-        raise RuntimeError(error_msg)
+    try:
+        cfg = _read_secrets_prefixed("SNOWFLAKE")
+        required = ["USER", "PASSWORD", "ACCOUNT", "WAREHOUSE", "DATABASE", "SCHEMA"]
+        missing = [k for k in required if not cfg.get(k)]
+        if missing:
+            error_msg = (
+                "❌ Snowflake session not available. For Streamlit in Snowflake, no configuration needed. "
+                "For local development, missing secrets: " + ", ".join(missing)
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
+    except Exception as e:
+        if "secrets" in str(e).lower():
+            # More helpful error for missing secrets files
+            error_msg = (
+                "❌ Running outside Streamlit in Snowflake and no secrets configured. "
+                "Either run in Streamlit in Snowflake (no config needed) or configure local secrets."
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        raise
 
     connection_parameters = {
         "account": cfg["ACCOUNT"],
@@ -519,11 +540,41 @@ st.caption("Powered by Snowflake – Schema: FSI_DEMOS.WEALTH_360")
 with st.sidebar:
     st.header("Configuration")
     try:
-        _ = get_snowflake_session()
-        st.success("Connected to Snowflake")
+        session = get_snowflake_session()
+        st.success("✅ Connected to Snowflake")
+
+        # Show session context info
+        try:
+            current_db = session.get_current_database()
+            current_schema = session.get_current_schema()
+            current_warehouse = session.get_current_warehouse()
+
+            with st.expander("Session Context", expanded=False):
+                st.info(f"**Database:** {current_db}")
+                st.info(f"**Schema:** {current_schema}")
+                st.info(f"**Warehouse:** {current_warehouse}")
+        except Exception:
+            # Context info not critical
+            pass
+
     except Exception as e:
-        st.error("Snowflake connection failed. Configure secrets to continue.")
-        st.exception(e)
+        st.error("❌ Snowflake connection failed")
+
+        # Show helpful error message
+        error_str = str(e)
+        if "secrets" in error_str.lower() or "no configuration needed" in error_str:
+            st.info(
+                """
+            **For Streamlit in Snowflake:**
+            - No configuration needed! The app should work automatically.
+            - If you see this error, try refreshing the page.
+
+            **For local development:**
+            - Configure `.streamlit/secrets.toml` with your Snowflake credentials.
+            """
+            )
+        else:
+            st.exception(e)
         st.stop()
 
     st.divider()
