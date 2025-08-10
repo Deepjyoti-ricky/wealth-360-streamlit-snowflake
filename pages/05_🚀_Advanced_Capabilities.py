@@ -944,7 +944,7 @@ with advanced_tabs[4]:
                 y=[1],
                 marker_color=color,
                 text=layer,
-                textposition="middle",
+                textposition="inside",
                 showlegend=False,
             )
         )
