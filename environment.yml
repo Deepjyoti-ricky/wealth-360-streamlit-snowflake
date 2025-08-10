@@ -1,0 +1,27 @@
+# Snowflake environment configuration for Streamlit in Snowflake
+# This file specifies the Python packages required for the BFSI Wealth 360 Analytics Platform
+
+name: sf_env
+channels:
+  - snowflake
+
+dependencies:
+  # Core Streamlit and Snowflake packages (pre-installed)
+  - python=3.11
+  - streamlit=1.45.1
+  - snowflake-snowpark-python
+
+  # Data processing and analytics
+  - pandas
+  - numpy
+
+  # Visualization packages
+  - plotly
+
+  # Additional packages for geospatial analytics
+  - pydeck
+
+  # Optional: Additional data science packages
+  # - scikit-learn
+  # - scipy
+  # - matplotlib

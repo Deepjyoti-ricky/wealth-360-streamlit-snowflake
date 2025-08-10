@@ -70,13 +70,29 @@ graph TB
 
 **Zero-configuration deployment** - Upload and run immediately:
 
-1. **Upload Application**
+1. **Upload Application Files**
    ```sql
    -- In Snowsight, create new Streamlit app
    -- Upload streamlit_app.py as main file
+   -- Upload environment.yml for package dependencies
    ```
 
-2. **Optional Context Configuration**
+2. **Package Dependencies (environment.yml)**
+   ```yaml
+   name: sf_env
+   channels:
+     - snowflake
+   dependencies:
+     - python=3.11
+     - streamlit=1.45.1
+     - snowflake-snowpark-python
+     - pandas
+     - numpy
+     - plotly
+     - pydeck
+   ```
+
+3. **Optional Context Configuration**
    ```toml
    # Snowsight Secrets (optional overrides)
    [SNOWFLAKE]
@@ -86,7 +102,7 @@ graph TB
    ROLE = "ACCOUNTADMIN"
    ```
 
-3. **Launch** - Application runs immediately with active session
+4. **Launch** - Application runs immediately with active session
 
 ### 💻 Local Development
 
@@ -118,7 +134,7 @@ streamlit run streamlit_app.py
 
 **🚨 Troubleshooting Dependencies:**
 
-If you encounter `ModuleNotFoundError: No module named 'plotly'`:
+**For Local Development** - If you encounter `ModuleNotFoundError: No module named 'plotly'`:
 
 ```bash
 # Option 1: Use automated installer
@@ -134,6 +150,28 @@ pip uninstall -y plotly && pip install plotly>=5.24.0
 # Verify installation
 python -c "import plotly; print(f'Plotly {plotly.__version__} installed successfully')"
 ```
+
+**For Streamlit in Snowflake** - If you encounter import errors:
+
+```yaml
+# Ensure environment.yml is uploaded with your app
+# The file must be at the same level as streamlit_app.py
+
+name: sf_env
+channels:
+  - snowflake
+dependencies:
+  - plotly  # This installs from Snowflake Anaconda Channel
+  - pandas
+  - numpy
+  - pydeck
+```
+
+**Common Streamlit in Snowflake Issues:**
+- ✅ Upload both `streamlit_app.py` AND `environment.yml`
+- ✅ Use `channels: - snowflake` (required)
+- ✅ Check package availability in [Snowflake Anaconda Channel](https://repo.anaconda.com/pkgs/snowflake/)
+- ❌ Don't use pip requirements.txt in Streamlit in Snowflake
 
 ## 🛠️ Advanced Technical Features
 
