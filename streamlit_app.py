@@ -1997,7 +1997,7 @@ with tabs[12]:
                 title="Weather-Sensitive Sector Exposure",
                 labels={"LOCATION_AUM": "Exposed AUM ($)"},
             )
-            fig_sector.update_xaxis(tickangle=45)
+            fig_sector.update_layout(xaxis_tickangle=45)
             st.plotly_chart(fig_sector, use_container_width=True)
 
         st.subheader("⚠️ Climate Risk Assessment Details")
