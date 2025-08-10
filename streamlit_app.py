@@ -14,8 +14,10 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
+import pydeck as pdk
 import streamlit as st
 from snowflake.snowpark import Session
 from snowflake.snowpark.context import get_active_session
@@ -2214,28 +2216,62 @@ with tabs[12]:
         if not client_locations_df.empty and all(
             col in client_locations_df.columns for col in ["LATITUDE", "LONGITUDE"]
         ):
-            # Create scatter mapbox without token (uses open street map)
-            fig_mapbox = px.scatter_mapbox(
-                client_locations_df,
-                lat="LATITUDE",
-                lon="LONGITUDE",
-                size="PORTFOLIO_VALUE",
-                color="RISK_TOLERANCE",
-                hover_name="CLIENT_NAME",
-                hover_data=["CITY", "STATE", "PORTFOLIO_VALUE", "NET_WORTH_ESTIMATE"],
-                title="Client Portfolio Distribution - Interactive Map",
-                zoom=3,
-                center={"lat": 39.8283, "lon": -98.5795},  # Center of USA
-                mapbox_style="open-street-map",  # No token required
-                labels={"PORTFOLIO_VALUE": "Portfolio Value ($)"},
-                size_max=20,
+            # Prepare data for PyDeck visualization
+            client_locations_df["portfolio_size"] = (
+                np.log1p(client_locations_df["PORTFOLIO_VALUE"]) * 100
             )
-            fig_mapbox.update_layout(
-                mapbox_style="open-street-map",
-                height=600,
-                margin={"r": 0, "t": 40, "l": 0, "b": 0},
+
+            # Color mapping for risk tolerance
+            risk_color_map = {
+                "Conservative": [70, 130, 180, 180],  # Steel Blue
+                "Moderate": [255, 165, 0, 180],  # Orange
+                "Balanced": [50, 205, 50, 180],  # Lime Green
+                "Growth": [255, 99, 71, 180],  # Tomato
+                "Aggressive Growth": [220, 20, 60, 180],  # Crimson
+            }
+
+            # Add color column
+            client_locations_df["color"] = client_locations_df["RISK_TOLERANCE"].map(
+                lambda x: risk_color_map.get(x, [128, 128, 128, 180])  # Gray default
             )
-            st.plotly_chart(fig_mapbox, use_container_width=True)
+
+            # Create PyDeck 3D scatter plot
+            st.pydeck_chart(
+                pdk.Deck(
+                    map_style="mapbox://styles/mapbox/light-v9",
+                    initial_view_state=pdk.ViewState(
+                        latitude=39.8283,
+                        longitude=-98.5795,
+                        zoom=3,
+                        pitch=45,  # 3D effect
+                    ),
+                    layers=[
+                        pdk.Layer(
+                            "ScatterplotLayer",
+                            data=client_locations_df,
+                            get_position=["LONGITUDE", "LATITUDE"],
+                            get_color="color",
+                            get_radius="portfolio_size",
+                            radius_scale=20,
+                            radius_min_pixels=3,
+                            radius_max_pixels=30,
+                            pickable=True,
+                            filled=True,
+                            stroked=True,
+                            stroke_width=1,
+                            stroke_color=[255, 255, 255, 100],
+                        )
+                    ],
+                    tooltip={
+                        "html": "<b>{CLIENT_NAME}</b><br>"
+                        "Location: {CITY}, {STATE}<br>"
+                        "Portfolio Value: ${PORTFOLIO_VALUE:,.0f}<br>"
+                        "Risk Tolerance: {RISK_TOLERANCE}<br>"
+                        "Net Worth: ${NET_WORTH_ESTIMATE:,.0f}",
+                        "style": {"backgroundColor": "steelblue", "color": "white"},
+                    },
+                )
+            )
 
         # Risk profile analysis
         col3, col4 = st.columns(2)
@@ -2322,33 +2358,56 @@ with tabs[12]:
         st.subheader("🌡️ Climate Risk Heat Map")
         climate_locations_df = get_climate_risk_locations()
         if not climate_locations_df.empty:
-            fig_climate_map = px.scatter_mapbox(
-                climate_locations_df,
-                lat="LATITUDE",
-                lon="LONGITUDE",
-                size="LOCATION_AUM",
-                color="RISK_LEVEL",
-                hover_name="STATE",
-                hover_data=["PRIMARY_CLIMATE_RISK", "CLIENT_COUNT", "LOCATION_AUM"],
-                title="Climate Risk Exposure by Location - Interactive Map",
-                zoom=3,
-                center={"lat": 39.8283, "lon": -98.5795},
-                mapbox_style="open-street-map",
-                labels={"LOCATION_AUM": "Location AUM ($)"},
-                color_discrete_map={
-                    "Very High": "#FF4444",
-                    "High": "#FF8800",
-                    "Medium": "#FFDD00",
-                    "Low": "#44FF44",
-                },
-                size_max=30,
+            # Color mapping for climate risk levels
+            risk_level_colors = {
+                "Very High": [255, 68, 68, 200],  # Red
+                "High": [255, 136, 0, 180],  # Orange
+                "Medium": [255, 221, 0, 160],  # Yellow
+                "Low": [68, 255, 68, 140],  # Green
+            }
+
+            # Add color and elevation based on risk and AUM
+            climate_locations_df["color"] = climate_locations_df["RISK_LEVEL"].map(
+                lambda x: risk_level_colors.get(x, [128, 128, 128, 160])
             )
-            fig_climate_map.update_layout(
-                mapbox_style="open-street-map",
-                height=600,
-                margin={"r": 0, "t": 40, "l": 0, "b": 0},
+            climate_locations_df["elevation"] = (
+                np.log1p(climate_locations_df["LOCATION_AUM"]) * 50
             )
-            st.plotly_chart(fig_climate_map, use_container_width=True)
+
+            # Create PyDeck 3D column chart for climate risk
+            st.pydeck_chart(
+                pdk.Deck(
+                    map_style="mapbox://styles/mapbox/dark-v9",
+                    initial_view_state=pdk.ViewState(
+                        latitude=39.8283,
+                        longitude=-98.5795,
+                        zoom=3,
+                        pitch=50,
+                        bearing=0,
+                    ),
+                    layers=[
+                        pdk.Layer(
+                            "ColumnLayer",
+                            data=climate_locations_df,
+                            get_position=["LONGITUDE", "LATITUDE"],
+                            get_elevation="elevation",
+                            elevation_scale=100,
+                            get_fill_color="color",
+                            radius=50000,
+                            pickable=True,
+                            auto_highlight=True,
+                        )
+                    ],
+                    tooltip={
+                        "html": "<b>State: {STATE}</b><br>"
+                        "Climate Risk: {RISK_LEVEL}<br>"
+                        "Risk Type: {PRIMARY_CLIMATE_RISK}<br>"
+                        "Clients: {CLIENT_COUNT}<br>"
+                        "AUM Exposure: ${LOCATION_AUM:,.0f}",
+                        "style": {"backgroundColor": "black", "color": "white"},
+                    },
+                )
+            )
 
     # Market Penetration & Opportunity Analysis
     st.subheader("🎯 Market Penetration & Growth Opportunities")
@@ -2436,27 +2495,116 @@ with tabs[12]:
         st.subheader("🗺️ Advisor Territory Coverage Map")
         advisor_locations_df = get_advisor_location_details()
         if not advisor_locations_df.empty:
-            fig_advisor_map = px.scatter_mapbox(
-                advisor_locations_df,
-                lat="LATITUDE",
-                lon="LONGITUDE",
-                size="TOTAL_AUM",
-                color="COVERAGE_TYPE",
-                hover_name="ADVISOR_NAME",
-                hover_data=["REGION", "SPECIALIZATION", "TOTAL_CLIENTS", "TOTAL_AUM"],
-                title="Advisor Territory Coverage - Interactive Map",
-                zoom=3,
-                center={"lat": 39.8283, "lon": -98.5795},
-                mapbox_style="open-street-map",
-                labels={"TOTAL_AUM": "Total AUM ($)"},
-                size_max=25,
+            # Color mapping for coverage types
+            coverage_colors = {
+                "National Coverage": [255, 0, 0, 180],  # Red
+                "Regional Coverage": [255, 165, 0, 180],  # Orange
+                "State Coverage": [0, 255, 0, 180],  # Green
+                "Local Coverage": [0, 0, 255, 180],  # Blue
+            }
+
+            # Prepare data for PyDeck
+            advisor_locations_df["color"] = advisor_locations_df["COVERAGE_TYPE"].map(
+                lambda x: coverage_colors.get(x, [128, 128, 128, 180])
             )
-            fig_advisor_map.update_layout(
-                mapbox_style="open-street-map",
-                height=600,
-                margin={"r": 0, "t": 40, "l": 0, "b": 0},
+            advisor_locations_df["aum_size"] = (
+                np.log1p(advisor_locations_df["TOTAL_AUM"]) * 50
             )
-            st.plotly_chart(fig_advisor_map, use_container_width=True)
+
+            # Create PyDeck hexagon layer for advisor density
+            st.pydeck_chart(
+                pdk.Deck(
+                    map_style="mapbox://styles/mapbox/light-v9",
+                    initial_view_state=pdk.ViewState(
+                        latitude=39.8283,
+                        longitude=-98.5795,
+                        zoom=4,
+                        pitch=30,
+                    ),
+                    layers=[
+                        # Hexagon layer for advisor density
+                        pdk.Layer(
+                            "HexagonLayer",
+                            data=advisor_locations_df,
+                            get_position=["LONGITUDE", "LATITUDE"],
+                            get_weight="TOTAL_AUM",
+                            radius=100000,
+                            elevation_scale=10,
+                            elevation_range=[0, 3000],
+                            pickable=True,
+                            extruded=True,
+                            coverage=0.8,
+                            auto_highlight=True,
+                        ),
+                        # Scatter layer for individual advisors
+                        pdk.Layer(
+                            "ScatterplotLayer",
+                            data=advisor_locations_df,
+                            get_position=["LONGITUDE", "LATITUDE"],
+                            get_color="color",
+                            get_radius="aum_size",
+                            radius_scale=100,
+                            radius_min_pixels=5,
+                            radius_max_pixels=20,
+                            pickable=True,
+                            filled=True,
+                            stroked=True,
+                            stroke_width=2,
+                            stroke_color=[255, 255, 255, 200],
+                        ),
+                    ],
+                    tooltip={
+                        "html": "<b>{ADVISOR_NAME}</b><br>"
+                        "Region: {REGION}<br>"
+                        "Specialization: {SPECIALIZATION}<br>"
+                        "Coverage: {COVERAGE_TYPE}<br>"
+                        "Clients: {TOTAL_CLIENTS}<br>"
+                        "Total AUM: ${TOTAL_AUM:,.0f}",
+                        "style": {"backgroundColor": "navy", "color": "white"},
+                    },
+                )
+            )
+
+            # PyDeck Legend
+            st.subheader("🎨 Map Legend")
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.markdown(
+                    """
+                **Client Location Map**
+                - 🔵 Conservative (Steel Blue)
+                - 🟠 Moderate (Orange)
+                - 🟢 Balanced (Green)
+                - 🔴 Growth (Tomato)
+                - ⚫ Aggressive Growth (Crimson)
+                - *Size = Portfolio Value*
+                """
+                )
+
+            with col2:
+                st.markdown(
+                    """
+                **Climate Risk Map**
+                - 🔴 Very High Risk
+                - 🟠 High Risk
+                - 🟡 Medium Risk
+                - 🟢 Low Risk
+                - *Height = AUM Exposure*
+                """
+                )
+
+            with col3:
+                st.markdown(
+                    """
+                **Advisor Coverage Map**
+                - 🔴 National Coverage
+                - 🟠 Regional Coverage
+                - 🟢 State Coverage
+                - 🔵 Local Coverage
+                - *Hexagons = AUM Density*
+                """
+                )
 
     # Integration insights
     st.subheader("🔗 Data Integration Opportunities")
