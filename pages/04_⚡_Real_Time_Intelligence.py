@@ -547,7 +547,7 @@ with realtime_tabs[2]:
 
         st.pydeck_chart(
             pdk.Deck(
-                map_style="mapbox://styles/mapbox/dark-v11",
+                map_style=None,
                 initial_view_state=pdk.ViewState(
                     latitude=20,
                     longitude=0,
@@ -555,6 +555,13 @@ with realtime_tabs[2]:
                     pitch=30,
                 ),
                 layers=[
+                    pdk.Layer(
+                        "TileLayer",
+                        data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        min_zoom=0,
+                        max_zoom=19,
+                        tile_size=256,
+                    ),
                     pdk.Layer(
                         "ScatterplotLayer",
                         data=global_df,
@@ -564,7 +571,7 @@ with realtime_tabs[2]:
                         radius_scale=50,
                         pickable=True,
                         auto_highlight=True,
-                    )
+                    ),
                 ],
                 tooltip={
                     "html": "<b>🌍 {city}</b><br/>Activity Level: {activity}",
@@ -638,7 +645,7 @@ with realtime_tabs[2]:
 
         st.pydeck_chart(
             pdk.Deck(
-                map_style="mapbox://styles/mapbox/satellite-streets-v12",
+                map_style=None,
                 initial_view_state=pdk.ViewState(
                     latitude=35,
                     longitude=0,
@@ -646,6 +653,13 @@ with realtime_tabs[2]:
                     pitch=40,
                 ),
                 layers=[
+                    pdk.Layer(
+                        "TileLayer",
+                        data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        min_zoom=0,
+                        max_zoom=19,
+                        tile_size=256,
+                    ),
                     pdk.Layer(
                         "ArcLayer",
                         data=transaction_flows_df,
@@ -656,7 +670,7 @@ with realtime_tabs[2]:
                         get_width="width",
                         width_scale=1000,
                         pickable=True,
-                    )
+                    ),
                 ],
                 tooltip={
                     "html": "<b>💰 Transaction Flow</b><br/>Amount: ${amount:,.0f}",

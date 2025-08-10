@@ -440,7 +440,7 @@ with advanced_tabs[0]:
 
                 st.pydeck_chart(
                     pdk.Deck(
-                        map_style=selected_map_style,
+                        map_style=None,
                         initial_view_state=pdk.ViewState(
                             latitude=37.0902,
                             longitude=-95.7129,
@@ -448,6 +448,14 @@ with advanced_tabs[0]:
                             pitch=30,
                         ),
                         layers=[
+                            # Base map (OpenStreetMap tiles, no token required)
+                            pdk.Layer(
+                                "TileLayer",
+                                data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                min_zoom=0,
+                                max_zoom=19,
+                                tile_size=256,
+                            ),
                             # Bubbles sized and colored by AUM
                             pdk.Layer(
                                 "ScatterplotLayer",
@@ -603,7 +611,7 @@ with advanced_tabs[0]:
 
             st.pydeck_chart(
                 pdk.Deck(
-                    map_style="mapbox://styles/mapbox/light-v8",
+                    map_style=None,
                     initial_view_state=pdk.ViewState(
                         latitude=39.8283,
                         longitude=-98.5795,
@@ -612,6 +620,13 @@ with advanced_tabs[0]:
                         bearing=15,
                     ),
                     layers=[
+                        pdk.Layer(
+                            "TileLayer",
+                            data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            min_zoom=0,
+                            max_zoom=19,
+                            tile_size=256,
+                        ),
                         pdk.Layer(
                             "ScatterplotLayer",
                             data=metro_df,
@@ -623,7 +638,7 @@ with advanced_tabs[0]:
                             radius_max_pixels=60,
                             pickable=True,
                             auto_highlight=True,
-                        )
+                        ),
                     ],
                     tooltip={
                         "html": "<b>{metro}</b><br/>"
@@ -691,7 +706,7 @@ with advanced_tabs[0]:
 
             st.pydeck_chart(
                 pdk.Deck(
-                    map_style="mapbox://styles/mapbox/dark-v11",
+                    map_style=None,
                     initial_view_state=pdk.ViewState(
                         latitude=39.8283,
                         longitude=-98.5795,
@@ -699,6 +714,13 @@ with advanced_tabs[0]:
                         pitch=30,
                     ),
                     layers=[
+                        pdk.Layer(
+                            "TileLayer",
+                            data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            min_zoom=0,
+                            max_zoom=19,
+                            tile_size=256,
+                        ),
                         pdk.Layer(
                             "HexagonLayer",
                             data=heatmap_df,
@@ -711,7 +733,7 @@ with advanced_tabs[0]:
                             extruded=True,
                             coverage=0.8,
                             auto_highlight=True,
-                        )
+                        ),
                     ],
                 ),
                 use_container_width=True,
@@ -792,7 +814,7 @@ with advanced_tabs[0]:
 
             st.pydeck_chart(
                 pdk.Deck(
-                    map_style="mapbox://styles/mapbox/light-v8",
+                    map_style=None,
                     initial_view_state=pdk.ViewState(
                         latitude=37.0902,
                         longitude=-95.7129,
@@ -801,6 +823,13 @@ with advanced_tabs[0]:
                         bearing=20,
                     ),
                     layers=[
+                        pdk.Layer(
+                            "TileLayer",
+                            data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            min_zoom=0,
+                            max_zoom=19,
+                            tile_size=256,
+                        ),
                         # Growth flow lines
                         pdk.Layer(
                             "ArcLayer",
@@ -973,7 +1002,7 @@ with advanced_tabs[1]:
 
         st.pydeck_chart(
             pdk.Deck(
-                map_style="mapbox://styles/mapbox/satellite-v9",
+                map_style=None,
                 initial_view_state=pdk.ViewState(
                     latitude=29.0,
                     longitude=-87.0,
@@ -982,6 +1011,13 @@ with advanced_tabs[1]:
                     bearing=0,
                 ),
                 layers=[
+                    pdk.Layer(
+                        "TileLayer",
+                        data="https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        min_zoom=0,
+                        max_zoom=19,
+                        tile_size=256,
+                    ),
                     pdk.Layer(
                         "ScatterplotLayer",
                         data=flood_df,
@@ -993,7 +1029,7 @@ with advanced_tabs[1]:
                         radius_max_pixels=80,
                         pickable=True,
                         auto_highlight=True,
-                    )
+                    ),
                 ],
                 tooltip={
                     "html": "<b>🌊 {city}</b><br/>"
@@ -1091,7 +1127,7 @@ with advanced_tabs[1]:
 
         st.pydeck_chart(
             pdk.Deck(
-                map_style="mapbox://styles/mapbox/outdoors-v12",
+                map_style=None,
                 initial_view_state=pdk.ViewState(
                     latitude=37.0,
                     longitude=-119.0,
@@ -1212,7 +1248,7 @@ with advanced_tabs[1]:
 
         st.pydeck_chart(
             pdk.Deck(
-                map_style="mapbox://styles/mapbox/dark-v11",
+                map_style=None,
                 initial_view_state=pdk.ViewState(
                     latitude=32.0,
                     longitude=-90.0,
