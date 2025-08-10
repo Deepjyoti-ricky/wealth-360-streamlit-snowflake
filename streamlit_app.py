@@ -537,6 +537,483 @@ def get_interactions_summary(window_days: int = 365) -> Dict[str, pd.DataFrame]:
 
 
 # -----------------------------
+# Advanced Use Case Functions
+# -----------------------------
+
+
+def get_customer_360_segments() -> Dict[str, pd.DataFrame]:
+    """Customer 360 & Segmentation - Single view across balances, portfolios, behavior"""
+
+    # Client segmentation by AUM
+    segments_sql = """
+        WITH latest_positions AS (
+            SELECT p.PORTFOLIO_ID, p.CLIENT_ID, MAX(ph.TIMESTAMP) AS MAX_TS
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            GROUP BY 1, 2
+        ),
+        client_aum AS (
+            SELECT lp.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_AUM,
+                   COUNT(DISTINCT lp.PORTFOLIO_ID) AS NUM_PORTFOLIOS
+            FROM latest_positions lp
+            JOIN POSITION_HISTORY ph ON lp.PORTFOLIO_ID = ph.PORTFOLIO_ID AND lp.MAX_TS = ph.TIMESTAMP
+            WHERE ph.TICKER <> 'CASH'
+            GROUP BY 1
+        )
+        SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME, c.RISK_TOLERANCE,
+               ca.TOTAL_AUM, ca.NUM_PORTFOLIOS,
+               CASE
+                   WHEN ca.TOTAL_AUM >= 10000000 THEN 'Ultra High Net Worth (>$10M)'
+                   WHEN ca.TOTAL_AUM >= 5000000 THEN 'High Net Worth ($5-10M)'
+                   WHEN ca.TOTAL_AUM >= 1000000 THEN 'Affluent ($1-5M)'
+                   WHEN ca.TOTAL_AUM >= 250000 THEN 'Mass Affluent ($250K-1M)'
+                   ELSE 'Emerging Wealth (<$250K)'
+               END AS WEALTH_SEGMENT,
+               c.NET_WORTH_ESTIMATE
+        FROM CLIENTS c
+        LEFT JOIN client_aum ca ON c.CLIENT_ID = ca.CLIENT_ID
+        ORDER BY ca.TOTAL_AUM DESC NULLS LAST
+    """
+
+    # Engagement patterns
+    engagement_sql = """
+        SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME,
+               COUNT(i.INTERACTION_ID) AS TOTAL_INTERACTIONS,
+               MAX(i.TIMESTAMP) AS LAST_INTERACTION,
+               DATEDIFF(DAY, MAX(i.TIMESTAMP), CURRENT_DATE) AS DAYS_SINCE_LAST_CONTACT,
+               COUNT(DISTINCT i.CHANNEL) AS CHANNELS_USED,
+               COUNT(CASE WHEN i.INTERACTION_TYPE = 'Complaint' THEN 1 END) AS COMPLAINTS
+        FROM CLIENTS c
+        LEFT JOIN INTERACTIONS i ON c.CLIENT_ID = i.CLIENT_ID
+        GROUP BY 1, 2, 3
+        ORDER BY TOTAL_INTERACTIONS DESC
+    """
+
+    return {
+        "segments": run_query(segments_sql),
+        "engagement": run_query(engagement_sql),
+    }
+
+
+def get_next_best_actions() -> pd.DataFrame:
+    """Next Best Action - Cross/upsell recommendations based on behavior patterns"""
+
+    sql = """
+        WITH client_profile AS (
+            SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME, c.RISK_TOLERANCE,
+                   COUNT(DISTINCT p.PORTFOLIO_ID) AS NUM_PORTFOLIOS,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_AUM,
+                   MAX(i.TIMESTAMP) AS LAST_INTERACTION
+            FROM CLIENTS c
+            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            LEFT JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            LEFT JOIN INTERACTIONS i ON c.CLIENT_ID = i.CLIENT_ID
+            WHERE ph.TICKER <> 'CASH' OR ph.TICKER IS NULL
+            GROUP BY 1, 2, 3, 4
+        ),
+        recommendations AS (
+            SELECT CLIENT_ID, FIRST_NAME, LAST_NAME, RISK_TOLERANCE, TOTAL_AUM,
+                   CASE
+                       WHEN NUM_PORTFOLIOS = 0 THEN 'Portfolio Setup - Start Investment Journey'
+                       WHEN NUM_PORTFOLIOS = 1 AND TOTAL_AUM > 500000 THEN 'Diversification - Add Second Portfolio'
+                       WHEN RISK_TOLERANCE = 'Conservative' AND TOTAL_AUM > 1000000 THEN 'Tax Optimization - Municipal Bonds'
+                       WHEN RISK_TOLERANCE IN ('Growth', 'Aggressive Growth') AND NUM_PORTFOLIOS < 3 THEN 'Alternative Investments - REITs/Commodities'
+                       WHEN DATEDIFF(DAY, LAST_INTERACTION, CURRENT_DATE) > 180 THEN 'Re-engagement - Portfolio Review Meeting'
+                       WHEN TOTAL_AUM > 2000000 THEN 'Wealth Planning - Estate & Trust Services'
+                       ELSE 'Relationship Deepening - Financial Planning Session'
+                   END AS RECOMMENDED_ACTION,
+                   CASE
+                       WHEN TOTAL_AUM > 5000000 THEN 'High'
+                       WHEN TOTAL_AUM > 1000000 THEN 'Medium'
+                       ELSE 'Low'
+                   END AS PRIORITY,
+                   ROUND(TOTAL_AUM * 0.02, 0) AS ESTIMATED_REVENUE_IMPACT
+            FROM client_profile
+        )
+        SELECT * FROM recommendations
+        ORDER BY
+            CASE PRIORITY WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,
+            TOTAL_AUM DESC
+        LIMIT 50
+    """
+    return run_query(sql)
+
+
+def get_churn_early_warning() -> pd.DataFrame:
+    """Attrition/Churn Early Warning - Balance flight & engagement drop detection"""
+
+    sql = """
+        WITH balance_trends AS (
+            SELECT p.CLIENT_ID, p.PORTFOLIO_ID,
+                   SUM(CASE WHEN ph.TIMESTAMP >= DATEADD(DAY, -30, CURRENT_DATE) THEN ph.MARKET_VALUE ELSE 0 END) AS RECENT_BALANCE,
+                   SUM(CASE WHEN ph.TIMESTAMP >= DATEADD(DAY, -90, CURRENT_DATE) AND ph.TIMESTAMP < DATEADD(DAY, -30, CURRENT_DATE) THEN ph.MARKET_VALUE ELSE 0 END) AS PRIOR_BALANCE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TICKER <> 'CASH'
+            GROUP BY 1, 2
+        ),
+        engagement_drop AS (
+            SELECT CLIENT_ID,
+                   COUNT(CASE WHEN TIMESTAMP >= DATEADD(DAY, -30, CURRENT_DATE) THEN 1 END) AS RECENT_INTERACTIONS,
+                   COUNT(CASE WHEN TIMESTAMP >= DATEADD(DAY, -90, CURRENT_DATE) AND TIMESTAMP < DATEADD(DAY, -30, CURRENT_DATE) THEN 1 END) AS PRIOR_INTERACTIONS
+            FROM INTERACTIONS
+            GROUP BY 1
+        )
+        SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME,
+               SUM(bt.RECENT_BALANCE) AS RECENT_BALANCE,
+               SUM(bt.PRIOR_BALANCE) AS PRIOR_BALANCE,
+               CASE
+                   WHEN SUM(bt.PRIOR_BALANCE) > 0
+                   THEN ROUND((SUM(bt.RECENT_BALANCE) - SUM(bt.PRIOR_BALANCE)) / SUM(bt.PRIOR_BALANCE) * 100, 2)
+                   ELSE 0
+               END AS BALANCE_CHANGE_PCT,
+               ed.RECENT_INTERACTIONS,
+               ed.PRIOR_INTERACTIONS,
+               CASE
+                   WHEN SUM(bt.RECENT_BALANCE) < SUM(bt.PRIOR_BALANCE) * 0.8 AND ed.RECENT_INTERACTIONS < ed.PRIOR_INTERACTIONS * 0.5 THEN 'High Risk'
+                   WHEN SUM(bt.RECENT_BALANCE) < SUM(bt.PRIOR_BALANCE) * 0.9 OR ed.RECENT_INTERACTIONS < ed.PRIOR_INTERACTIONS * 0.7 THEN 'Medium Risk'
+                   ELSE 'Low Risk'
+               END AS CHURN_RISK
+        FROM CLIENTS c
+        LEFT JOIN balance_trends bt ON c.CLIENT_ID = bt.CLIENT_ID
+        LEFT JOIN engagement_drop ed ON c.CLIENT_ID = ed.CLIENT_ID
+        WHERE SUM(bt.PRIOR_BALANCE) > 0
+        GROUP BY 1, 2, 3, ed.RECENT_INTERACTIONS, ed.PRIOR_INTERACTIONS
+        HAVING CHURN_RISK IN ('High Risk', 'Medium Risk')
+        ORDER BY BALANCE_CHANGE_PCT ASC
+    """
+    return run_query(sql)
+
+
+def get_portfolio_drift_analysis() -> pd.DataFrame:
+    """Portfolio Drift & Rebalance - Asset-class drift vs strategy analysis"""
+
+    sql = """
+        WITH latest_positions AS (
+            SELECT PORTFOLIO_ID, MAX(TIMESTAMP) AS MAX_TS
+            FROM POSITION_HISTORY
+            GROUP BY 1
+        ),
+        current_allocation AS (
+            SELECT p.PORTFOLIO_ID, p.STRATEGY_TYPE,
+                   ph.ASSET_CLASS,
+                   SUM(ph.MARKET_VALUE) AS CURRENT_VALUE,
+                   SUM(SUM(ph.MARKET_VALUE)) OVER (PARTITION BY p.PORTFOLIO_ID) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN latest_positions lp ON p.PORTFOLIO_ID = lp.PORTFOLIO_ID
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID AND lp.MAX_TS = ph.TIMESTAMP
+            WHERE ph.TICKER <> 'CASH'
+            GROUP BY 1, 2, 3
+        ),
+        target_allocations AS (
+            SELECT 'Conservative' AS STRATEGY_TYPE, 'Equities' AS ASSET_CLASS, 30 AS TARGET_PCT
+            UNION ALL SELECT 'Conservative', 'Fixed Income', 60, 10
+            UNION ALL SELECT 'Conservative', 'Cash', 10, 0
+            UNION ALL SELECT 'Balanced', 'Equities', 50, 30
+            UNION ALL SELECT 'Balanced', 'Fixed Income', 40, 10
+            UNION ALL SELECT 'Balanced', 'Cash', 10, 0
+            UNION ALL SELECT 'Growth', 'Equities', 70, 30
+            UNION ALL SELECT 'Growth', 'Fixed Income', 25, 5
+            UNION ALL SELECT 'Growth', 'Cash', 5, 0
+            UNION ALL SELECT 'Aggressive Growth', 'Equities', 85, 15
+            UNION ALL SELECT 'Aggressive Growth', 'Fixed Income', 10, 5
+            UNION ALL SELECT 'Aggressive Growth', 'Cash', 5, 0
+        )
+        SELECT ca.PORTFOLIO_ID, ca.STRATEGY_TYPE, ca.ASSET_CLASS,
+               ROUND(ca.CURRENT_VALUE / ca.TOTAL_PORTFOLIO_VALUE * 100, 2) AS CURRENT_PCT,
+               ta.TARGET_PCT,
+               ROUND(ca.CURRENT_VALUE / ca.TOTAL_PORTFOLIO_VALUE * 100 - ta.TARGET_PCT, 2) AS DRIFT_PCT,
+               CASE
+                   WHEN ABS(ca.CURRENT_VALUE / ca.TOTAL_PORTFOLIO_VALUE * 100 - ta.TARGET_PCT) > 10 THEN 'High Drift'
+                   WHEN ABS(ca.CURRENT_VALUE / ca.TOTAL_PORTFOLIO_VALUE * 100 - ta.TARGET_PCT) > 5 THEN 'Medium Drift'
+                   ELSE 'Within Range'
+               END AS DRIFT_STATUS,
+               ca.TOTAL_PORTFOLIO_VALUE
+        FROM current_allocation ca
+        LEFT JOIN target_allocations ta ON ca.STRATEGY_TYPE = ta.STRATEGY_TYPE AND ca.ASSET_CLASS = ta.ASSET_CLASS
+        WHERE ta.TARGET_PCT IS NOT NULL
+        ORDER BY ABS(DRIFT_PCT) DESC
+    """
+    return run_query(sql)
+
+
+def get_idle_cash_analysis() -> pd.DataFrame:
+    """Idle Cash / Cash-Sweep - Identify opportunities to monetize idle balances"""
+
+    sql = """
+        WITH latest_positions AS (
+            SELECT PORTFOLIO_ID, MAX(TIMESTAMP) AS MAX_TS
+            FROM POSITION_HISTORY
+            GROUP BY 1
+        ),
+        cash_analysis AS (
+            SELECT p.PORTFOLIO_ID, p.CLIENT_ID, p.STRATEGY_TYPE,
+                   SUM(CASE WHEN ph.TICKER = 'CASH' THEN ph.MARKET_VALUE ELSE 0 END) AS CASH_BALANCE,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN latest_positions lp ON p.PORTFOLIO_ID = lp.PORTFOLIO_ID
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID AND lp.MAX_TS = ph.TIMESTAMP
+            GROUP BY 1, 2, 3
+        )
+        SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME,
+               ca.PORTFOLIO_ID, ca.STRATEGY_TYPE,
+               ca.CASH_BALANCE,
+               ca.TOTAL_PORTFOLIO_VALUE,
+               ROUND(ca.CASH_BALANCE / NULLIF(ca.TOTAL_PORTFOLIO_VALUE, 0) * 100, 2) AS CASH_PCT,
+               CASE
+                   WHEN ca.CASH_BALANCE / NULLIF(ca.TOTAL_PORTFOLIO_VALUE, 0) > 0.15 THEN 'High Cash (>15%)'
+                   WHEN ca.CASH_BALANCE / NULLIF(ca.TOTAL_PORTFOLIO_VALUE, 0) > 0.10 THEN 'Moderate Cash (10-15%)'
+                   WHEN ca.CASH_BALANCE / NULLIF(ca.TOTAL_PORTFOLIO_VALUE, 0) > 0.05 THEN 'Normal Cash (5-10%)'
+                   ELSE 'Low Cash (<5%)'
+               END AS CASH_STATUS,
+               ROUND(ca.CASH_BALANCE * 0.03, 0) AS POTENTIAL_ANNUAL_NII,
+               CASE
+                   WHEN ca.CASH_BALANCE > 100000 AND ca.CASH_BALANCE / NULLIF(ca.TOTAL_PORTFOLIO_VALUE, 0) > 0.10 THEN 'Investment Opportunity'
+                   WHEN ca.CASH_BALANCE > 50000 AND ca.CASH_BALANCE / NULLIF(ca.TOTAL_PORTFOLIO_VALUE, 0) > 0.15 THEN 'Sweep Recommendation'
+                   ELSE 'Monitor'
+               END AS RECOMMENDATION
+        FROM cash_analysis ca
+        JOIN CLIENTS c ON ca.CLIENT_ID = c.CLIENT_ID
+        WHERE ca.CASH_BALANCE > 0
+        ORDER BY ca.CASH_BALANCE DESC
+    """
+    return run_query(sql)
+
+
+def get_trade_fee_anomalies() -> pd.DataFrame:
+    """Trade & Fee Anomaly Detection - Catch leakage, waivers, outliers"""
+
+    sql = """
+        WITH fee_stats AS (
+            SELECT TRANSACTION_TYPE,
+                   AVG(FEE_AMOUNT) AS AVG_FEE,
+                   STDDEV(FEE_AMOUNT) AS STDDEV_FEE,
+                   COUNT(*) AS TRANSACTION_COUNT
+            FROM TRANSACTIONS
+            WHERE FEE_AMOUNT IS NOT NULL AND FEE_AMOUNT > 0
+            GROUP BY 1
+        ),
+        anomalies AS (
+            SELECT t.TRANSACTION_ID, t.CLIENT_ID, t.PORTFOLIO_ID,
+                   t.TRANSACTION_TYPE, t.TRANSACTION_AMOUNT, t.FEE_AMOUNT,
+                   t.TIMESTAMP,
+                   fs.AVG_FEE, fs.STDDEV_FEE,
+                   CASE
+                       WHEN t.FEE_AMOUNT = 0 AND t.TRANSACTION_AMOUNT > 10000 THEN 'Zero Fee on Large Trade'
+                       WHEN t.FEE_AMOUNT > fs.AVG_FEE + 3 * fs.STDDEV_FEE THEN 'Unusually High Fee'
+                       WHEN t.FEE_AMOUNT < fs.AVG_FEE - 2 * fs.STDDEV_FEE AND t.FEE_AMOUNT > 0 THEN 'Unusually Low Fee'
+                       WHEN t.TRANSACTION_AMOUNT > 1000000 AND t.FEE_AMOUNT / t.TRANSACTION_AMOUNT < 0.001 THEN 'Large Trade Low Fee Rate'
+                       ELSE 'Normal'
+                   END AS ANOMALY_TYPE
+            FROM TRANSACTIONS t
+            LEFT JOIN fee_stats fs ON t.TRANSACTION_TYPE = fs.TRANSACTION_TYPE
+            WHERE t.TIMESTAMP >= DATEADD(DAY, -90, CURRENT_DATE)
+        )
+        SELECT a.*, c.FIRST_NAME, c.LAST_NAME,
+               ROUND(a.FEE_AMOUNT / NULLIF(a.TRANSACTION_AMOUNT, 0) * 100, 4) AS FEE_RATE_PCT,
+               ROUND(a.AVG_FEE - a.FEE_AMOUNT, 2) AS FEE_DIFFERENCE
+        FROM anomalies a
+        JOIN CLIENTS c ON a.CLIENT_ID = c.CLIENT_ID
+        WHERE a.ANOMALY_TYPE <> 'Normal'
+        ORDER BY a.TIMESTAMP DESC
+    """
+    return run_query(sql)
+
+
+def get_event_driven_opportunities() -> pd.DataFrame:
+    """Event-Driven Outreach - Life/market events for timely client engagement"""
+
+    sql = """
+        WITH recent_market_events AS (
+            SELECT DISTINCT EVENT_TYPE, EVENT_DATE, IMPACT_DESCRIPTION
+            FROM MARKET_EVENTS
+            WHERE EVENT_DATE >= DATEADD(DAY, -30, CURRENT_DATE)
+        ),
+        client_impact AS (
+            SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME,
+                   c.LIFE_EVENT, c.LIFE_EVENT_DATE,
+                   MAX(i.TIMESTAMP) AS LAST_CONTACT,
+                   DATEDIFF(DAY, MAX(i.TIMESTAMP), CURRENT_DATE) AS DAYS_SINCE_CONTACT
+            FROM CLIENTS c
+            LEFT JOIN INTERACTIONS i ON c.CLIENT_ID = i.CLIENT_ID
+            GROUP BY 1, 2, 3, 4, 5
+        )
+        SELECT ci.CLIENT_ID, ci.FIRST_NAME, ci.LAST_NAME,
+               CASE
+                   WHEN ci.LIFE_EVENT IS NOT NULL AND ci.LIFE_EVENT_DATE >= DATEADD(DAY, -60, CURRENT_DATE) THEN 'Recent Life Event'
+                   WHEN ci.DAYS_SINCE_CONTACT > 90 THEN 'Long-term Re-engagement'
+                   WHEN EXISTS (SELECT 1 FROM recent_market_events) THEN 'Market Event Follow-up'
+                   ELSE 'Regular Check-in'
+               END AS OUTREACH_TYPE,
+               ci.LIFE_EVENT,
+               ci.LIFE_EVENT_DATE,
+               ci.LAST_CONTACT,
+               ci.DAYS_SINCE_CONTACT,
+               CASE
+                   WHEN ci.LIFE_EVENT IN ('Marriage', 'Birth', 'Retirement') THEN 'High'
+                   WHEN ci.DAYS_SINCE_CONTACT > 180 THEN 'High'
+                   WHEN ci.DAYS_SINCE_CONTACT > 90 THEN 'Medium'
+                   ELSE 'Low'
+               END AS PRIORITY,
+               CASE
+                   WHEN ci.LIFE_EVENT = 'Marriage' THEN 'Joint account setup, beneficiary updates'
+                   WHEN ci.LIFE_EVENT = 'Birth' THEN 'Education savings, life insurance review'
+                   WHEN ci.LIFE_EVENT = 'Retirement' THEN 'Income planning, asset allocation review'
+                   WHEN ci.DAYS_SINCE_CONTACT > 180 THEN 'Relationship health check, portfolio review'
+                   ELSE 'Market update, investment opportunities'
+               END AS SUGGESTED_DISCUSSION_TOPICS
+        FROM client_impact ci
+        WHERE ci.LIFE_EVENT IS NOT NULL OR ci.DAYS_SINCE_CONTACT > 60
+        ORDER BY
+            CASE PRIORITY WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,
+            ci.DAYS_SINCE_CONTACT DESC
+    """
+    return run_query(sql)
+
+
+def get_sentiment_analysis() -> Dict[str, pd.DataFrame]:
+    """Complaint/Sentiment Intelligence - Mine interaction notes for issues & sentiment"""
+
+    # Complaints trend
+    complaints_sql = """
+        SELECT DATE_TRUNC('MONTH', TIMESTAMP) AS MONTH,
+               COUNT(*) AS TOTAL_COMPLAINTS,
+               COUNT(CASE WHEN OUTCOME_NOTES LIKE '%resolved%' THEN 1 END) AS RESOLVED,
+               COUNT(CASE WHEN OUTCOME_NOTES LIKE '%escalated%' THEN 1 END) AS ESCALATED,
+               AVG(DATEDIFF(DAY, TIMESTAMP, CURRENT_DATE)) AS AVG_RESOLUTION_DAYS
+        FROM INTERACTIONS
+        WHERE INTERACTION_TYPE = 'Complaint'
+          AND TIMESTAMP >= DATEADD(MONTH, -12, CURRENT_DATE)
+        GROUP BY 1
+        ORDER BY 1
+    """
+
+    # Recent sentiment indicators
+    sentiment_sql = """
+        SELECT CLIENT_ID, INTERACTION_ID, TIMESTAMP, CHANNEL,
+               OUTCOME_NOTES,
+               CASE
+                   WHEN OUTCOME_NOTES LIKE ANY ('%satisfied%', '%happy%', '%pleased%', '%excellent%') THEN 'Positive'
+                   WHEN OUTCOME_NOTES LIKE ANY ('%dissatisfied%', '%unhappy%', '%frustrated%', '%angry%', '%complaint%') THEN 'Negative'
+                   WHEN OUTCOME_NOTES LIKE ANY ('%concerned%', '%worried%', '%question%', '%clarification%') THEN 'Neutral/Concerned'
+                   ELSE 'Neutral'
+               END AS SENTIMENT_INDICATOR,
+               CASE
+                   WHEN OUTCOME_NOTES LIKE '%fee%' THEN 'Fees'
+                   WHEN OUTCOME_NOTES LIKE ANY ('%performance%', '%return%', '%loss%') THEN 'Performance'
+                   WHEN OUTCOME_NOTES LIKE ANY ('%service%', '%response%', '%wait%') THEN 'Service Quality'
+                   WHEN OUTCOME_NOTES LIKE ANY ('%advisor%', '%relationship%') THEN 'Advisor Relationship'
+                   ELSE 'General'
+               END AS ISSUE_CATEGORY
+        FROM INTERACTIONS
+        WHERE OUTCOME_NOTES IS NOT NULL
+          AND TIMESTAMP >= DATEADD(DAY, -90, CURRENT_DATE)
+        ORDER BY TIMESTAMP DESC
+        LIMIT 100
+    """
+
+    return {
+        "complaints_trend": run_query(complaints_sql),
+        "sentiment_analysis": run_query(sentiment_sql),
+    }
+
+
+def generate_wealth_narrative(client_id: str) -> Dict[str, Any]:
+    """Wealth Narrative & Client Briefing - Auto-generate client summaries"""
+
+    # Client overview
+    overview_sql = f"""
+        SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME, c.RISK_TOLERANCE,
+               c.NET_WORTH_ESTIMATE, c.LIFE_EVENT, c.LIFE_EVENT_DATE,
+               COUNT(DISTINCT p.PORTFOLIO_ID) AS NUM_PORTFOLIOS,
+               COUNT(DISTINCT acr.ADVISOR_ID) AS NUM_ADVISORS
+        FROM CLIENTS c
+        LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+        LEFT JOIN ADVISOR_CLIENT_RELATIONSHIPS acr ON c.CLIENT_ID = acr.CLIENT_ID
+        WHERE c.CLIENT_ID = '{client_id}'
+        GROUP BY 1, 2, 3, 4, 5, 6, 7
+    """
+
+    # Portfolio summary
+    portfolio_sql = f"""
+        WITH latest_positions AS (
+            SELECT PORTFOLIO_ID, MAX(TIMESTAMP) AS MAX_TS
+            FROM POSITION_HISTORY
+            GROUP BY 1
+        )
+        SELECT p.PORTFOLIO_ID, p.STRATEGY_TYPE,
+               SUM(ph.MARKET_VALUE) AS TOTAL_VALUE,
+               COUNT(DISTINCT ph.TICKER) AS NUM_HOLDINGS
+        FROM PORTFOLIOS p
+        JOIN latest_positions lp ON p.PORTFOLIO_ID = lp.PORTFOLIO_ID
+        JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID AND lp.MAX_TS = ph.TIMESTAMP
+        WHERE p.CLIENT_ID = '{client_id}' AND ph.TICKER <> 'CASH'
+        GROUP BY 1, 2
+        ORDER BY TOTAL_VALUE DESC
+    """
+
+    # Recent interactions
+    interactions_sql = f"""
+        SELECT TIMESTAMP, INTERACTION_TYPE, CHANNEL, OUTCOME_NOTES
+        FROM INTERACTIONS
+        WHERE CLIENT_ID = '{client_id}'
+        ORDER BY TIMESTAMP DESC
+        LIMIT 10
+    """
+
+    return {
+        "overview": run_query(overview_sql),
+        "portfolios": run_query(portfolio_sql),
+        "interactions": run_query(interactions_sql),
+    }
+
+
+def get_kyc_insights() -> pd.DataFrame:
+    """KYB/KYC Ops Copilot - Client documentation and compliance insights"""
+
+    sql = """
+        WITH client_doc_status AS (
+            SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME,
+                   c.NET_WORTH_ESTIMATE, c.RISK_TOLERANCE,
+                   COUNT(DISTINCT p.PORTFOLIO_ID) AS NUM_PORTFOLIOS,
+                   MAX(i.TIMESTAMP) AS LAST_VERIFICATION_CHECK,
+                   DATEDIFF(DAY, MAX(i.TIMESTAMP), CURRENT_DATE) AS DAYS_SINCE_VERIFICATION,
+                   CASE
+                       WHEN c.NET_WORTH_ESTIMATE > 5000000 THEN 'Enhanced Due Diligence Required'
+                       WHEN DATEDIFF(DAY, MAX(i.TIMESTAMP), CURRENT_DATE) > 365 THEN 'Annual Review Due'
+                       WHEN COUNT(DISTINCT p.PORTFOLIO_ID) > 3 THEN 'Complex Structure Review'
+                       ELSE 'Standard Monitoring'
+                   END AS KYC_STATUS,
+                   CASE
+                       WHEN c.NET_WORTH_ESTIMATE > 10000000 THEN 'High'
+                       WHEN c.NET_WORTH_ESTIMATE > 5000000 OR COUNT(DISTINCT p.PORTFOLIO_ID) > 3 THEN 'Medium'
+                       ELSE 'Low'
+                   END AS RISK_RATING
+            FROM CLIENTS c
+            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            LEFT JOIN INTERACTIONS i ON c.CLIENT_ID = i.CLIENT_ID
+            GROUP BY 1, 2, 3, 4, 5
+        )
+        SELECT CLIENT_ID, FIRST_NAME, LAST_NAME, NET_WORTH_ESTIMATE,
+               RISK_TOLERANCE, NUM_PORTFOLIOS, LAST_VERIFICATION_CHECK,
+               DAYS_SINCE_VERIFICATION, KYC_STATUS, RISK_RATING,
+               CASE
+                   WHEN KYC_STATUS = 'Enhanced Due Diligence Required' THEN 'Wealth source verification, PEP screening'
+                   WHEN KYC_STATUS = 'Annual Review Due' THEN 'Update personal info, refresh risk assessment'
+                   WHEN KYC_STATUS = 'Complex Structure Review' THEN 'Entity structure validation, beneficial ownership'
+                   ELSE 'Standard documentation refresh'
+               END AS RECOMMENDED_ACTIONS
+        FROM client_doc_status
+        WHERE KYC_STATUS <> 'Standard Monitoring' OR DAYS_SINCE_VERIFICATION > 180
+        ORDER BY
+            CASE RISK_RATING WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,
+            DAYS_SINCE_VERIFICATION DESC
+    """
+    return run_query(sql)
+
+
+# -----------------------------
 # UI Layout
 # -----------------------------
 
@@ -546,8 +1023,37 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("BFSI Wealth 360 – Analytics & Use Cases")
-st.caption("Powered by Snowflake – Schema: FSI_DEMOS.WEALTH_360")
+st.title("🏦 BFSI Wealth 360 – Advanced Analytics Platform")
+st.caption(
+    "🚀 Powered by Snowflake | Schema: FSI_DEMOS.WEALTH_360 | 12 Advanced Use Cases"
+)
+
+# Use Case Overview
+with st.expander(
+    "📋 **Use Case Catalog** - Click to see all 12 advanced capabilities",
+    expanded=False,
+):
+    st.markdown(
+        """
+    | Use Case | Why It Matters | Key Tables | KPIs | Complexity/TTV |
+    |----------|----------------|------------|------|----------------|
+    | 🎯 **Customer 360 & Segmentation** | Single view across balances, portfolios, behavior | CLIENTS, ACCOUNTS, ACCOUNT_HISTORY, TRANSACTIONS, PORTFOLIOS | AUM/NTB growth, segment coverage, data freshness | Low / 1–2 wks |
+    | 🎁 **Next Best Action (cross/upsell)** | Recommend card/loan/insurance/portfolio actions | CLIENTS, TRANSACTIONS, INTERACTIONS, PORTFOLIOS | Offer CTR, conversion, AUM lift | Med / 2–4 wks |
+    | ⚠️ **Attrition/Churn Early Warning** | Catch balance flight & engagement drop | ACCOUNT_HISTORY, INTERACTIONS, ADVISOR_CLIENT_RELATIONSHIPS | Churn rate, save rate, time-to-contact | Med / 2–4 wks |
+    | ⚖️ **Suitability & Risk Drift Alerts** | Ensure portfolio aligns to risk tolerance | CLIENTS (RISK_TOLERANCE), PORTFOLIOS, POSITION_HISTORY | Suitability breaches, time-to-remediate | Med / 3–5 wks |
+    | 📊 **Portfolio Drift & Rebalance** | Alert on asset-class drift vs strategy | PORTFOLIOS, POSITION_HISTORY | Drift % over threshold, rebalance yield | Med / 3–5 wks |
+    | 💰 **Idle Cash / Cash-Sweep** | Monetize idle balances | ACCOUNT_HISTORY, POSITION_HISTORY | Cash ratio, NII uplift | Low / 1–2 wks |
+    | 🔍 **Trade & Fee Anomaly Detection** | Catch leakage/waivers/outliers | TRANSACTIONS | Fee recovery, false-positive rate | Med / 2–4 wks |
+    | 👥 **Advisor Productivity & Coverage** | Improve book management & cadences | ADVISOR_CLIENT_RELATIONSHIPS, INTERACTIONS | Coverage %, last-contact SLA, meetings/client | Low / 1–2 wks |
+    | 📅 **Event-Driven Outreach** | Timely, contextual nudge at life/market events | CLIENTS (LIFE_EVENT), MARKET_EVENTS, INTERACTIONS | Engagement rate, booked meetings | Low / 1–2 wks |
+    | 💬 **Complaint/Sentiment Intelligence** | Mine notes for issues & intent | INTERACTIONS (OUTCOME_NOTES, LLM_GENERATED_CONTENT) | NPS proxy, time-to-resolution | Low / 1–2 wks |
+    | 🤖 **Wealth Narrative & Client Briefing** | Auto-generate client summaries & talking points | CLIENTS, PORTFOLIOS, POSITION_HISTORY, INTERACTIONS | Prep time saved, call quality score | Low / 1–2 wks |
+    | 📋 **KYB/KYC Ops Copilot** | Speed up checks & documentation Q&A | CLIENTS/ACCOUNTS + external docs | Cycle time, touchless rate | Med / 3–6 wks |
+    """
+    )
+    st.info(
+        "💡 **Navigate through the tabs below to explore each use case with live data and interactive analytics.**"
+    )
 
 # Sidebar – connection status and filters
 with st.sidebar:
@@ -618,102 +1124,137 @@ with st.sidebar:
 
 tabs = st.tabs(
     [
-        "Overview",
-        "HNW Retention",
-        "Advisor Productivity",
-        "Portfolio Performance",
-        "Compliance & Risk",
-        "Market Events Impact",
-        "Digital Engagement",
+        "🎯 Customer 360",
+        "🎁 Next Best Action",
+        "⚠️ Churn Warning",
+        "⚖️ Suitability Risk",
+        "📊 Portfolio Drift",
+        "💰 Idle Cash",
+        "🔍 Fee Anomalies",
+        "👥 Advisor Coverage",
+        "📅 Event Outreach",
+        "💬 Sentiment",
+        "🤖 AI Briefing",
+        "📋 KYC Copilot",
     ]
 )
 
 
-# Overview
+# 🎯 Customer 360 & Segmentation
 with tabs[0]:
-    st.subheader("Firm Overview")
-    kpis = get_global_kpis()
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Clients", f"{kpis['num_clients']:,}")
-    c2.metric("Advisors", f"{kpis['num_advisors']:,}")
-    c3.metric("AUM (latest)", f"${kpis['aum']:,.0f}")
-    if kpis["ytd_growth_pct"] is not None:
-        c4.metric("YTD Growth", f"{kpis['ytd_growth_pct']*100:.2f}%")
-    else:
-        c4.metric("YTD Growth", "N/A")
-
-    st.divider()
-    st.subheader("Asset Allocation (Latest Snapshot)")
-    alloc_df = get_asset_allocation_latest()
-    if not alloc_df.empty:
-        fig = px.pie(alloc_df, names="ASSET_CLASS", values="TOTAL_VALUE", hole=0.4)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("No allocation data available.")
-
-
-# HNW Retention
-with tabs[1]:
-    st.subheader("High Net Worth – Low Engagement Clients")
-    hnw_df = get_hnw_low_engagement(
-        threshold_days=low_engagement_days, net_worth_threshold=int(hnw_threshold)
+    st.subheader("🎯 Customer 360 & Segmentation")
+    st.caption(
+        "Single view across balances, portfolios, behavior | KPIs: AUM/NTB growth, segment coverage, data freshness"
     )
-    if hnw_df.empty:
-        st.success("No HNW clients currently flagged for low engagement.")
-    else:
-        st.dataframe(hnw_df, use_container_width=True)
 
+    customer_data = get_customer_360_segments()
 
-# Advisor Productivity
-with tabs[2]:
-    st.subheader("Advisor Productivity & Coverage")
-    adv_df = get_advisor_productivity(window_days=advisor_window_days)
-    if not adv_df.empty:
-        st.dataframe(adv_df, use_container_width=True)
-        fig = px.bar(
-            adv_df,
-            x="ADVISOR_NAME",
-            y="TOTAL_AUM",
-            title="AUM by Advisor",
-            text_auto=True,
+    # Segment distribution
+    segments_df = customer_data["segments"]
+    if not segments_df.empty:
+        st.subheader("📊 Wealth Segment Distribution")
+        segment_counts = segments_df["WEALTH_SEGMENT"].value_counts()
+        fig = px.pie(
+            values=segment_counts.values,
+            names=segment_counts.index,
+            title="Client Distribution by Wealth Segment",
         )
-        fig.update_layout(xaxis_title="Advisor", yaxis_title="Total AUM (USD)")
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("No advisor productivity data available.")
 
+        st.subheader("💰 Client Portfolio Summary")
+        st.dataframe(segments_df.head(20), use_container_width=True)
 
-# Portfolio Performance
-with tabs[3]:
-    st.subheader("Firm-Level Performance (YTD)")
-    ytd = get_global_kpis().get("ytd_growth_pct")
-    if ytd is not None:
-        st.metric("YTD Growth (Firm AUM)", f"{ytd*100:.2f}%")
-    else:
-        st.info("YTD growth unavailable.")
-
-    st.divider()
-    st.subheader("Allocation – Latest Snapshot")
-    alloc_df = get_asset_allocation_latest()
-    if not alloc_df.empty:
-        fig2 = px.bar(
-            alloc_df,
-            x="ASSET_CLASS",
-            y="TOTAL_VALUE",
-            title="Allocation by Asset Class",
+    # Engagement patterns
+    engagement_df = customer_data["engagement"]
+    if not engagement_df.empty:
+        st.subheader("📞 Engagement Patterns")
+        fig2 = px.scatter(
+            engagement_df.head(50),
+            x="DAYS_SINCE_LAST_CONTACT",
+            y="TOTAL_INTERACTIONS",
+            hover_data=["FIRST_NAME", "LAST_NAME"],
+            title="Client Engagement: Interactions vs Days Since Last Contact",
         )
         st.plotly_chart(fig2, use_container_width=True)
+
+
+# 🎁 Next Best Action (Cross/Upsell)
+with tabs[1]:
+    st.subheader("🎁 Next Best Action - Cross/Upsell Recommendations")
+    st.caption(
+        "Recommend card/loan/insurance/portfolio actions | KPIs: Offer CTR, conversion, AUM lift"
+    )
+
+    nba_df = get_next_best_actions()
+    if not nba_df.empty:
+        # Priority distribution
+        priority_counts = nba_df["PRIORITY"].value_counts()
+        col1, col2, col3 = st.columns(3)
+        col1.metric("High Priority", priority_counts.get("High", 0))
+        col2.metric("Medium Priority", priority_counts.get("Medium", 0))
+        col3.metric("Low Priority", priority_counts.get("Low", 0))
+
+        st.subheader("🎯 Recommended Actions")
+        st.dataframe(nba_df, use_container_width=True)
+
+        # Revenue impact
+        fig = px.bar(
+            nba_df.head(15),
+            x="RECOMMENDED_ACTION",
+            y="ESTIMATED_REVENUE_IMPACT",
+            color="PRIORITY",
+            title="Estimated Revenue Impact by Recommendation",
+        )
+        fig.update_xaxes(tickangle=45)
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No allocation data available.")
+        st.info("No recommendations available.")
 
 
-# Compliance & Risk
-with tabs[4]:
-    st.subheader("Suitability Mismatches")
+# ⚠️ Attrition/Churn Early Warning
+with tabs[2]:
+    st.subheader("⚠️ Attrition/Churn Early Warning")
+    st.caption(
+        "Catch balance flight & engagement drop | KPIs: Churn rate, save rate, time-to-contact"
+    )
+
+    churn_df = get_churn_early_warning()
+    if not churn_df.empty:
+        # Risk distribution
+        risk_counts = churn_df["CHURN_RISK"].value_counts()
+        col1, col2 = st.columns(2)
+        col1.metric("🔴 High Risk", risk_counts.get("High Risk", 0))
+        col2.metric("🟡 Medium Risk", risk_counts.get("Medium Risk", 0))
+
+        st.subheader("⚠️ At-Risk Clients")
+        st.dataframe(churn_df, use_container_width=True)
+
+        # Balance change visualization
+        fig = px.scatter(
+            churn_df,
+            x="BALANCE_CHANGE_PCT",
+            y="RECENT_INTERACTIONS",
+            color="CHURN_RISK",
+            size="PRIOR_BALANCE",
+            hover_data=["FIRST_NAME", "LAST_NAME"],
+            title="Churn Risk: Balance Change vs Recent Interactions",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.success("✅ No clients currently at high churn risk.")
+
+
+# ⚖️ Suitability & Risk Drift Alerts
+with tabs[3]:
+    st.subheader("⚖️ Suitability & Risk Drift Alerts")
+    st.caption(
+        "Ensure portfolio aligns to risk tolerance | KPIs: Suitability breaches, time-to-remediate"
+    )
+
+    # Traditional suitability check
     mism = get_suitability_mismatches()
-    if mism.empty:
-        st.success("No suitability mismatches detected.")
-    else:
+    if not mism.empty:
+        st.subheader("🚨 Suitability Mismatches")
         st.dataframe(
             mism[
                 [
@@ -721,58 +1262,375 @@ with tabs[4]:
                     "FIRST_NAME",
                     "LAST_NAME",
                     "RISK_TOLERANCE",
-                    "PORTFOLIO_ID",
                     "STRATEGY_TYPE",
                 ]
             ],
             use_container_width=True,
         )
+    else:
+        st.success("✅ No suitability mismatches detected.")
 
+    # Enhanced concentration analysis
     st.divider()
-    st.subheader("Concentration Breaches")
     conc = get_concentration_breaches(threshold_pct=concentration_threshold)
-    if conc.empty:
-        st.success("No concentration breaches at the selected threshold.")
+    if not conc.empty:
+        st.subheader("⚠️ Concentration Risk Alerts")
+        st.dataframe(conc, use_container_width=True)
+
+        fig = px.bar(
+            conc.head(15),
+            x="TICKER",
+            y="PCT_OF_PORTFOLIO",
+            color="PORTFOLIO_ID",
+            title="Portfolio Concentration Breaches",
+        )
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        conc_disp = conc.copy()
-        conc_disp["PCT_OF_PORTFOLIO"] = (conc_disp["PCT_OF_PORTFOLIO"] * 100).round(2)
-        st.dataframe(conc_disp, use_container_width=True)
+        st.success("✅ No concentration breaches at selected threshold.")
 
 
-# Market Events Impact
+# 📊 Portfolio Drift & Rebalance
+with tabs[4]:
+    st.subheader("📊 Portfolio Drift & Rebalance")
+    st.caption(
+        "Alert on asset-class drift vs strategy | KPIs: Drift % over threshold, rebalance yield"
+    )
+
+    drift_df = get_portfolio_drift_analysis()
+    if not drift_df.empty:
+        # Drift status summary
+        drift_counts = drift_df["DRIFT_STATUS"].value_counts()
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🔴 High Drift", drift_counts.get("High Drift", 0))
+        col2.metric("🟡 Medium Drift", drift_counts.get("Medium Drift", 0))
+        col3.metric("✅ Within Range", drift_counts.get("Within Range", 0))
+
+        st.subheader("📊 Asset Allocation Drift Analysis")
+        st.dataframe(drift_df, use_container_width=True)
+
+        # Drift visualization
+        fig = px.scatter(
+            drift_df,
+            x="TARGET_PCT",
+            y="CURRENT_PCT",
+            color="DRIFT_STATUS",
+            size="TOTAL_PORTFOLIO_VALUE",
+            facet_col="ASSET_CLASS",
+            facet_col_wrap=3,
+            title="Target vs Current Allocation by Asset Class",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No portfolio drift data available.")
+
+
+# 💰 Idle Cash / Cash-Sweep
 with tabs[5]:
-    st.subheader("Market Events – AUM Impact")
-    me = get_market_events_impact()
-    if me.empty:
-        st.info("No market event impact data available.")
+    st.subheader("💰 Idle Cash / Cash-Sweep Opportunities")
+    st.caption("Monetize idle balances | KPIs: Cash ratio, NII uplift")
+
+    cash_df = get_idle_cash_analysis()
+    if not cash_df.empty:
+        # Cash opportunity summary
+        high_cash = cash_df[cash_df["CASH_STATUS"].str.contains("High")].shape[0]
+        investment_opps = cash_df[
+            cash_df["RECOMMENDATION"] == "Investment Opportunity"
+        ].shape[0]
+        total_idle_cash = cash_df["CASH_BALANCE"].sum()
+        potential_nii = cash_df["POTENTIAL_ANNUAL_NII"].sum()
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("High Cash Portfolios", high_cash)
+        col2.metric("Investment Opportunities", investment_opps)
+        col3.metric("Total Idle Cash", f"${total_idle_cash:,.0f}")
+        col4.metric("Potential Annual NII", f"${potential_nii:,.0f}")
+
+        st.subheader("💰 Cash Analysis by Portfolio")
+        st.dataframe(cash_df, use_container_width=True)
+
+        # Cash percentage distribution
+        fig = px.histogram(
+            cash_df,
+            x="CASH_PCT",
+            color="CASH_STATUS",
+            title="Distribution of Cash Percentages",
+        )
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.dataframe(me, use_container_width=True)
-        fig = px.bar(
-            me, x="EVENT_NAME", y="CHANGE_PCT", title="AUM % Change by Market Event"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        st.info("No cash sweep opportunities identified.")
 
 
-# Digital Engagement
+# 🔍 Trade & Fee Anomaly Detection
 with tabs[6]:
-    st.subheader("Engagement by Channel and Type")
-    sums = get_interactions_summary(window_days=interactions_window_days)
-    if not sums["by_channel"].empty:
-        fig = px.bar(
-            sums["by_channel"], x="CHANNEL", y="CNT", title="Interactions by Channel"
+    st.subheader("🔍 Trade & Fee Anomaly Detection")
+    st.caption(
+        "Catch leakage/waivers/outliers | KPIs: Fee recovery, false-positive rate"
+    )
+
+    anomalies_df = get_trade_fee_anomalies()
+    if not anomalies_df.empty:
+        # Anomaly type distribution
+        anomaly_counts = anomalies_df["ANOMALY_TYPE"].value_counts()
+        st.subheader("🚨 Anomaly Type Distribution")
+        fig = px.pie(
+            values=anomaly_counts.values,
+            names=anomaly_counts.index,
+            title="Fee Anomaly Types (Last 90 Days)",
         )
         st.plotly_chart(fig, use_container_width=True)
-    if not sums["by_type"].empty:
-        fig2 = px.bar(
-            sums["by_type"], x="INTERACTION_TYPE", y="CNT", title="Interactions by Type"
+
+        st.subheader("⚠️ Recent Fee Anomalies")
+        st.dataframe(anomalies_df, use_container_width=True)
+
+        # Fee analysis
+        fig2 = px.scatter(
+            anomalies_df,
+            x="TRANSACTION_AMOUNT",
+            y="FEE_AMOUNT",
+            color="ANOMALY_TYPE",
+            title="Transaction Amount vs Fee Amount (Anomalies Only)",
         )
         st.plotly_chart(fig2, use_container_width=True)
-    if not sums["complaints"].empty:
-        fig3 = px.line(
-            sums["complaints"], x="MONTH", y="COMPLAINTS", title="Complaints Over Time"
+    else:
+        st.success("✅ No fee anomalies detected in the last 90 days.")
+
+
+# 👥 Advisor Productivity & Coverage
+with tabs[7]:
+    st.subheader("👥 Advisor Productivity & Coverage")
+    st.caption(
+        "Improve book management & cadences | KPIs: Coverage %, last-contact SLA, meetings/client"
+    )
+
+    adv_df = get_advisor_productivity(window_days=advisor_window_days)
+    if not adv_df.empty:
+        st.subheader("📊 Advisor Performance Metrics")
+        st.dataframe(adv_df, use_container_width=True)
+
+        # AUM by advisor
+        fig = px.bar(
+            adv_df,
+            x="ADVISOR_NAME",
+            y="TOTAL_AUM",
+            title="Assets Under Management by Advisor",
+            text_auto=True,
+        )
+        fig.update_layout(xaxis_title="Advisor", yaxis_title="Total AUM (USD)")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Interactions vs AUM efficiency
+        fig2 = px.scatter(
+            adv_df,
+            x="INTERACTIONS_90D",
+            y="TOTAL_AUM",
+            size="NUM_CLIENTS",
+            hover_data=["ADVISOR_NAME"],
+            title="Advisor Efficiency: Interactions vs AUM",
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.info("No advisor productivity data available.")
+
+
+# 📅 Event-Driven Outreach
+with tabs[8]:
+    st.subheader("📅 Event-Driven Outreach (Life/Market)")
+    st.caption(
+        "Timely, contextual nudge at life/market events | KPIs: Engagement rate, booked meetings"
+    )
+
+    events_df = get_event_driven_opportunities()
+    if not events_df.empty:
+        # Outreach priority summary
+        priority_counts = events_df["PRIORITY"].value_counts()
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🔴 High Priority", priority_counts.get("High", 0))
+        col2.metric("🟡 Medium Priority", priority_counts.get("Medium", 0))
+        col3.metric("🟢 Low Priority", priority_counts.get("Low", 0))
+
+        st.subheader("📅 Outreach Opportunities")
+        st.dataframe(events_df, use_container_width=True)
+
+        # Outreach type distribution
+        outreach_counts = events_df["OUTREACH_TYPE"].value_counts()
+        fig = px.bar(
+            x=outreach_counts.index,
+            y=outreach_counts.values,
+            title="Outreach Opportunities by Type",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No immediate outreach opportunities identified.")
+
+
+# 💬 Complaint/Sentiment Intelligence
+with tabs[9]:
+    st.subheader("💬 Complaint/Sentiment Intelligence")
+    st.caption("Mine notes for issues & intent | KPIs: NPS proxy, time-to-resolution")
+
+    sentiment_data = get_sentiment_analysis()
+
+    # Complaints trend
+    complaints_df = sentiment_data["complaints_trend"]
+    if not complaints_df.empty:
+        st.subheader("📈 Complaints Trend (12 Months)")
+        fig = px.line(
+            complaints_df,
+            x="MONTH",
+            y="TOTAL_COMPLAINTS",
+            title="Monthly Complaints Volume",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Resolution analysis
+        fig2 = px.bar(
+            complaints_df,
+            x="MONTH",
+            y=["RESOLVED", "ESCALATED"],
+            title="Complaint Resolution Status by Month",
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    # Sentiment analysis
+    sentiment_df = sentiment_data["sentiment_analysis"]
+    if not sentiment_df.empty:
+        st.subheader("😊 Recent Sentiment Analysis")
+        sentiment_counts = sentiment_df["SENTIMENT_INDICATOR"].value_counts()
+        fig3 = px.pie(
+            values=sentiment_counts.values,
+            names=sentiment_counts.index,
+            title="Sentiment Distribution (Last 90 Days)",
         )
         st.plotly_chart(fig3, use_container_width=True)
 
-    st.divider()
-    st.subheader("Top Clients by Interactions")
-    st.dataframe(sums["top_clients"], use_container_width=True)
+        st.dataframe(sentiment_df.head(20), use_container_width=True)
+
+
+# 🤖 Wealth Narrative & Client Briefing (GenAI)
+with tabs[10]:
+    st.subheader("🤖 Wealth Narrative & Client Briefing (GenAI)")
+    st.caption(
+        "Auto-generate client summaries & talking points | KPIs: Prep time saved, call quality score"
+    )
+
+    # Client selector
+    all_clients = run_query(
+        "SELECT CLIENT_ID, FIRST_NAME, LAST_NAME FROM CLIENTS ORDER BY LAST_NAME"
+    )
+    if not all_clients.empty:
+        selected_client = st.selectbox(
+            "Select Client for AI-Generated Briefing:",
+            options=all_clients["CLIENT_ID"].tolist(),
+            format_func=lambda x: f"{all_clients[all_clients['CLIENT_ID']==x]['FIRST_NAME'].iloc[0]} {all_clients[all_clients['CLIENT_ID']==x]['LAST_NAME'].iloc[0]} ({x})",
+        )
+
+        if selected_client:
+            narrative_data = generate_wealth_narrative(selected_client)
+
+            # Client overview
+            overview_df = narrative_data["overview"]
+            if not overview_df.empty:
+                client_info = overview_df.iloc[0]
+                st.subheader(
+                    f"👤 Client Profile: {client_info['FIRST_NAME']} {client_info['LAST_NAME']}"
+                )
+
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Risk Tolerance", client_info["RISK_TOLERANCE"])
+                col2.metric(
+                    "Net Worth",
+                    (
+                        f"${client_info['NET_WORTH_ESTIMATE']:,.0f}"
+                        if pd.notna(client_info["NET_WORTH_ESTIMATE"])
+                        else "N/A"
+                    ),
+                )
+                col3.metric("Portfolios", client_info["NUM_PORTFOLIOS"])
+                col4.metric("Advisors", client_info["NUM_ADVISORS"])
+
+                # AI-Generated talking points (simulated)
+                st.subheader("🤖 AI-Generated Talking Points")
+                talking_points = [
+                    f"• Risk profile alignment: Client has {client_info['RISK_TOLERANCE']} risk tolerance with {client_info['NUM_PORTFOLIOS']} portfolio(s)",
+                    (
+                        f"• Wealth positioning: Estimated net worth of ${client_info['NET_WORTH_ESTIMATE']:,.0f}"
+                        if pd.notna(client_info["NET_WORTH_ESTIMATE"])
+                        else "• Wealth positioning: Net worth estimate not available"
+                    ),
+                    (
+                        f"• Life events: {client_info['LIFE_EVENT']} on {client_info['LIFE_EVENT_DATE']}"
+                        if pd.notna(client_info["LIFE_EVENT"])
+                        else "• Life events: No recent life events recorded"
+                    ),
+                ]
+                for point in talking_points:
+                    st.write(point)
+
+            # Portfolio summary
+            portfolios_df = narrative_data["portfolios"]
+            if not portfolios_df.empty:
+                st.subheader("💼 Portfolio Summary")
+                st.dataframe(portfolios_df, use_container_width=True)
+
+            # Recent interactions
+            interactions_df = narrative_data["interactions"]
+            if not interactions_df.empty:
+                st.subheader("📞 Recent Interactions")
+                st.dataframe(interactions_df, use_container_width=True)
+
+
+# 📋 KYB/KYC Ops Copilot (GenAI)
+with tabs[11]:
+    st.subheader("📋 KYB/KYC Ops Copilot (GenAI)")
+    st.caption("Speed up checks & documentation Q&A | KPIs: Cycle time, touchless rate")
+
+    kyc_df = get_kyc_insights()
+    if not kyc_df.empty:
+        # KYC status summary
+        kyc_counts = kyc_df["KYC_STATUS"].value_counts()
+        risk_counts = kyc_df["RISK_RATING"].value_counts()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("📋 KYC Status Distribution")
+            fig = px.pie(
+                values=kyc_counts.values,
+                names=kyc_counts.index,
+                title="KYC Review Status",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.subheader("⚖️ Risk Rating Distribution")
+            fig2 = px.pie(
+                values=risk_counts.values,
+                names=risk_counts.index,
+                title="Client Risk Ratings",
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+
+        st.subheader("📋 KYC Action Items")
+        st.dataframe(kyc_df, use_container_width=True)
+
+        # Days since verification analysis
+        fig3 = px.histogram(
+            kyc_df,
+            x="DAYS_SINCE_VERIFICATION",
+            color="RISK_RATING",
+            title="Days Since Last Verification by Risk Rating",
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+
+        # AI Copilot simulation
+        st.subheader("🤖 AI-Powered Document Analysis")
+        st.info(
+            """
+        **KYC Copilot Ready** - Upload client documents for instant analysis:
+        • Document completeness check
+        • Risk indicator extraction
+        • Compliance gap identification
+        • Auto-generated review summaries
+        """
+        )
+    else:
+        st.success("✅ All clients are up to date with KYC requirements.")
