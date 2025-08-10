@@ -39,7 +39,9 @@ cortex_tabs = st.tabs(
 # AI_COMPLETE Demonstration
 with cortex_tabs[0]:
     st.markdown("### 🤖 **AI_COMPLETE: Natural Language Processing**")
-    st.caption("Generate completions and insights using advanced LLMs")
+    st.caption(
+        "🚀 **Enhanced with interactive chat, model comparison, and real-time analytics**"
+    )
 
     col1, col2 = st.columns([2, 1])
 

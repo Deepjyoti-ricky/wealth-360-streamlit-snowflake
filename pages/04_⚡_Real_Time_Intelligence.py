@@ -1,412 +1,821 @@
 """
-AI & Automation - GenAI features, sentiment, recommendations
+Real-Time Intelligence - Live Monitoring and Automated Workflows
 
-This page provides AI-powered features including wealth narrative generation,
-KYC operations copilot, and automated client briefing capabilities.
+This page provides real-time monitoring dashboards, automated alerts,
+and live intelligence feeds powered by Cortex AI.
 
 Author: Deepjyoti Dev, Senior Data Cloud Architect, Snowflake GXC Team
 """
 
+from datetime import datetime, timedelta
+
+import numpy as np
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
+import pydeck as pdk
 import streamlit as st
 
-from utils.data_functions import generate_wealth_narrative, get_kyc_insights
+st.set_page_config(page_title="Real-Time Intelligence", page_icon="⚡", layout="wide")
 
-st.set_page_config(page_title="AI & Automation", page_icon="🤖", layout="wide")
-
-# Page header
-st.markdown("# ⚡ Real-Time Intelligence")
-st.caption(
-    "⚡ **Live monitoring and automated workflows powered by Cortex AI intelligence**"
+# Custom CSS for real-time styling
+st.markdown(
+    """
+<style>
+    .realtime-card {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        padding: 20px;
+        border-radius: 15px;
+        color: white;
+        margin: 10px 0;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        50% { box-shadow: 0 8px 35px rgba(0,0,0,0.25); }
+        100% { box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    }
+    .alert-card {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        margin: 5px 0;
+        animation: blink 1s infinite;
+    }
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.7; }
+    }
+    .monitor-card {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        margin: 5px 0;
+    }
+</style>
+""",
+    unsafe_allow_html=True,
 )
 
-# Sub-navigation within AI & Automation
-ai_subtabs = st.tabs(
-    ["🤖 Wealth Narrative", "📋 KYC Copilot", "🧠 AI Insights", "🎯 Recommendations"]
+# Page header with live timestamp
+current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.markdown(
+    f"""
+<div class="realtime-card">
+    <h1>⚡ Real-Time Intelligence Command Center</h1>
+    <h3>Live monitoring and automated workflows powered by Cortex AI</h3>
+    <p style="font-size: 16px; margin-bottom: 0;">🕐 Last Updated: {current_time} | Status: 🟢 All Systems Operational</p>
+</div>
+""",
+    unsafe_allow_html=True,
 )
 
-# Wealth Narrative & Client Briefing
-with ai_subtabs[0]:
-    st.markdown("### 🤖 Wealth Narrative & Client Briefing")
-    st.caption(
-        "Auto-generate client summaries & talking points | KPIs: Prep time saved, call quality score"
-    )
+# Real-time dashboard tabs
+realtime_tabs = st.tabs(
+    [
+        "🔴 Live Alerts",
+        "📊 Monitoring Dashboard",
+        "🗺️ Global Intelligence",
+        "🤖 AI Automation",
+        "⚡ Performance Center",
+    ]
+)
 
-    # Client Selection
-    st.markdown("**👤 Select Client for AI Briefing**")
-    client_id = st.text_input(
-        "Enter Client ID:",
-        value="C001",
-        help="Enter a client ID to generate AI-powered briefing",
-    )
+# Live Alerts Tab
+with realtime_tabs[0]:
+    st.markdown("### 🔴 **Live Alert Stream**")
 
-    if st.button("🧠 Generate AI Briefing", type="primary"):
-        if client_id:
-            narrative_data = generate_wealth_narrative(client_id)
+    # Alert priority filters
+    alert_col1, alert_col2, alert_col3 = st.columns([2, 1, 1])
 
-            # Client overview
-            overview_df = narrative_data["overview"]
-            if not overview_df.empty:
-                client_info = overview_df.iloc[0]
-                st.subheader(
-                    f"👤 Client Profile: {client_info['FIRST_NAME']} {client_info['LAST_NAME']}"
-                )
+    with alert_col1:
+        alert_filter = st.multiselect(
+            "Filter Alert Types:",
+            ["Critical", "High", "Medium", "Low", "Info"],
+            default=["Critical", "High"],
+        )
 
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("Risk Tolerance", client_info["RISK_TOLERANCE"])
-                col2.metric(
-                    "Net Worth",
-                    (
-                        f"${client_info['NET_WORTH_ESTIMATE']:,.0f}"
-                        if pd.notna(client_info["NET_WORTH_ESTIMATE"])
-                        else "N/A"
-                    ),
-                )
-                col3.metric("Portfolios", client_info["NUM_PORTFOLIOS"])
-                col4.metric("Advisors", client_info["NUM_ADVISORS"])
+    with alert_col2:
+        auto_refresh = st.checkbox("🔄 Auto Refresh", value=True)
 
-                # AI-Generated talking points (simulated)
-                st.subheader("🤖 AI-Generated Talking Points")
-                talking_points = [
-                    f"• Risk profile alignment: Client has {client_info['RISK_TOLERANCE']} risk tolerance with {client_info['NUM_PORTFOLIOS']} portfolio(s)",
-                    (
-                        f"• Wealth positioning: Estimated net worth of ${client_info['NET_WORTH_ESTIMATE']:,.0f}"
-                        if pd.notna(client_info["NET_WORTH_ESTIMATE"])
-                        else "• Wealth positioning: Net worth estimate not available"
-                    ),
-                    (
-                        f"• Life events: {client_info['LIFE_EVENT']} on {client_info['LIFE_EVENT_DATE']}"
-                        if pd.notna(client_info["LIFE_EVENT"])
-                        else "• Life events: No recent life events recorded"
-                    ),
-                ]
-                for point in talking_points:
-                    st.write(point)
+    with alert_col3:
+        if st.button("🔔 Clear All", use_container_width=True):
+            st.success("All alerts cleared!")
 
-                # AI Recommendations
-                st.subheader("🎯 AI-Powered Recommendations")
-                st.info("**Strategic Recommendations:**")
+    # Live alerts feed
+    @st.cache_data(ttl=30)  # Refresh every 30 seconds
+    def get_live_alerts():
+        np.random.seed(int(datetime.now().timestamp()) % 1000)
+        alerts = []
+
+        alert_types = [
+            {
+                "type": "Critical",
+                "icon": "🔴",
+                "msg": "Portfolio concentration breach detected",
+                "client": "Sarah Chen",
+                "value": "$12.3M",
+            },
+            {
+                "type": "High",
+                "icon": "🟡",
+                "msg": "Large withdrawal request pending",
+                "client": "Michael Torres",
+                "value": "$2.8M",
+            },
+            {
+                "type": "Critical",
+                "icon": "🔴",
+                "msg": "Suitability drift alert triggered",
+                "client": "Dr. Jennifer Wu",
+                "value": "$15.2M",
+            },
+            {
+                "type": "Medium",
+                "icon": "🟠",
+                "msg": "Client engagement gap exceeded 180 days",
+                "client": "Robert Kim",
+                "value": "$6.8M",
+            },
+            {
+                "type": "High",
+                "icon": "🟡",
+                "msg": "Risk score anomaly detected",
+                "client": "Lisa Rodriguez",
+                "value": "$9.4M",
+            },
+            {
+                "type": "Info",
+                "icon": "🔵",
+                "msg": "Rebalancing opportunity identified",
+                "client": "David Chen",
+                "value": "$4.2M",
+            },
+        ]
+
+        for i in range(np.random.randint(8, 15)):
+            alert = np.random.choice(alert_types)
+            timestamp = datetime.now() - timedelta(minutes=np.random.randint(1, 120))
+            alerts.append(
+                {
+                    **alert,
+                    "timestamp": timestamp.strftime("%H:%M:%S"),
+                    "id": f"ALT_{i+1:03d}",
+                }
+            )
+
+        return sorted(alerts, key=lambda x: x["timestamp"], reverse=True)
+
+    live_alerts = get_live_alerts()
+
+    # Display alerts
+    st.markdown("**🚨 Active Alerts (Real-time Feed):**")
+
+    for alert in live_alerts[:10]:  # Show top 10 alerts
+        if alert["type"] in alert_filter:
+            if alert["type"] == "Critical":
                 st.markdown(
-                    """
-                - **Portfolio Optimization**: Consider rebalancing based on current market conditions
-                - **Risk Assessment**: Review risk tolerance alignment quarterly
-                - **Growth Opportunities**: Explore alternative investment options for diversification
-                - **Communication Strategy**: Schedule quarterly reviews to maintain engagement
-                """
+                    f"""
+                <div class="alert-card">
+                    <b>{alert['icon']} {alert['type'].upper()} | {alert['timestamp']}</b><br>
+                    <b>Client:</b> {alert['client']} ({alert['value']})<br>
+                    <b>Alert:</b> {alert['msg']}<br>
+                    <b>ID:</b> {alert['id']}
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                priority_color = {
+                    "High": "#FFA500",
+                    "Medium": "#FFD700",
+                    "Low": "#90EE90",
+                    "Info": "#87CEEB",
+                }
+                st.markdown(
+                    f"""
+                <div style="background: {priority_color.get(alert['type'], '#gray')}; padding: 10px; border-radius: 8px; margin: 5px 0; color: white;">
+                    <b>{alert['icon']} {alert['type']} | {alert['timestamp']}</b> - {alert['client']} ({alert['value']}): {alert['msg']}
+                </div>
+                """,
+                    unsafe_allow_html=True,
                 )
 
-            # Portfolio summary
-            portfolios_df = narrative_data["portfolios"]
-            if not portfolios_df.empty:
-                st.subheader("💼 Portfolio Summary")
-                st.dataframe(portfolios_df, use_container_width=True)
+    if auto_refresh:
+        st.rerun()
 
-                # Portfolio visualization
-                if len(portfolios_df) > 1:
-                    fig = px.pie(
-                        portfolios_df,
-                        values="CURRENT_VALUE",
-                        names="STRATEGY_TYPE",
-                        title="Portfolio Allocation by Strategy",
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+# Monitoring Dashboard Tab
+with realtime_tabs[1]:
+    st.markdown("### 📊 **Real-Time Monitoring Dashboard**")
 
-            # AI Conversation Starters
-            st.subheader("💬 AI-Generated Conversation Starters")
-            conversation_starters = [
-                "How are you feeling about the current market volatility and its impact on your portfolio?",
-                "Have there been any changes in your financial goals since our last conversation?",
-                "Would you like to discuss any upcoming major expenses or life changes?",
-                "Are you satisfied with your current investment performance and risk level?",
+    # Key metrics row
+    metrics_col1, metrics_col2, metrics_col3, metrics_col4, metrics_col5 = st.columns(5)
+
+    with metrics_col1:
+        st.markdown(
+            """
+        <div class="monitor-card">
+            <h4>🔴 Critical Alerts</h4>
+            <h2>7</h2>
+            <p>Last 24h: +3</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with metrics_col2:
+        st.markdown(
+            """
+        <div class="monitor-card">
+            <h4>💰 AUM at Risk</h4>
+            <h2>$47M</h2>
+            <p>Requires attention</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with metrics_col3:
+        st.markdown(
+            """
+        <div class="monitor-card">
+            <h4>⚡ Response Time</h4>
+            <h2>1.2s</h2>
+            <p>Avg system response</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with metrics_col4:
+        st.markdown(
+            """
+        <div class="monitor-card">
+            <h4>🎯 Accuracy</h4>
+            <h2>94.7%</h2>
+            <p>AI prediction rate</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with metrics_col5:
+        st.markdown(
+            """
+        <div class="monitor-card">
+            <h4>🚀 Automated</h4>
+            <h2>89%</h2>
+            <p>Process automation</p>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    # Live monitoring charts
+    monitor_col1, monitor_col2 = st.columns(2)
+
+    with monitor_col1:
+        # Real-time activity feed
+        @st.cache_data(ttl=10)
+        def get_activity_data():
+            times = [
+                (datetime.now() - timedelta(minutes=i)).strftime("%H:%M")
+                for i in range(30, 0, -1)
+            ]
+            activities = [np.random.randint(50, 200) for _ in times]
+            return times, activities
+
+        times, activities = get_activity_data()
+
+        fig_activity = go.Figure()
+        fig_activity.add_trace(
+            go.Scatter(
+                x=times,
+                y=activities,
+                mode="lines+markers",
+                name="Activity Level",
+                line=dict(color="#00ff41", width=3),
+                marker=dict(size=6),
+            )
+        )
+        fig_activity.update_layout(
+            title="Live System Activity (30 min)",
+            xaxis_title="Time",
+            yaxis_title="Activity Level",
+            height=400,
+            plot_bgcolor="rgba(0,0,0,0.1)",
+        )
+        st.plotly_chart(fig_activity, use_container_width=True)
+
+    with monitor_col2:
+        # System health indicators
+        health_data = {
+            "Component": [
+                "Database",
+                "API Gateway",
+                "AI Models",
+                "Security",
+                "Network",
+            ],
+            "Status": [99.9, 99.8, 98.5, 100.0, 99.2],
+            "Response_Time": [12, 45, 1200, 8, 23],
+        }
+
+        fig_health = go.Figure()
+
+        # Add status bars
+        fig_health.add_trace(
+            go.Bar(
+                name="Uptime %",
+                y=health_data["Component"],
+                x=health_data["Status"],
+                orientation="h",
+                marker=dict(
+                    color=[
+                        "green" if x > 99 else "orange" if x > 95 else "red"
+                        for x in health_data["Status"]
+                    ]
+                ),
+            )
+        )
+
+        fig_health.update_layout(
+            title="System Health Monitor", xaxis_title="Uptime (%)", height=400
+        )
+        st.plotly_chart(fig_health, use_container_width=True)
+
+    # Live transaction monitoring
+    st.markdown("**💳 Live Transaction Monitoring**")
+
+    @st.cache_data(ttl=5)
+    def get_transaction_stream():
+        transactions = []
+        for i in range(15):
+            transaction = {
+                "time": (datetime.now() - timedelta(seconds=i * 10)).strftime(
+                    "%H:%M:%S"
+                ),
+                "type": np.random.choice(["Buy", "Sell", "Transfer", "Withdrawal"]),
+                "amount": np.random.randint(1000, 50000),
+                "client": np.random.choice(
+                    ["Sarah C.", "Michael T.", "Jennifer W.", "Robert K.", "Lisa R."]
+                ),
+                "status": np.random.choice(
+                    ["Completed", "Processing", "Pending"], p=[0.7, 0.2, 0.1]
+                ),
+            }
+            transactions.append(transaction)
+        return transactions
+
+    transactions = get_transaction_stream()
+
+    # Display as streaming table
+    transaction_df = pd.DataFrame(transactions)
+
+    # Color code by status
+    def highlight_status(val):
+        if val == "Completed":
+            return "background-color: #90EE90"
+        elif val == "Processing":
+            return "background-color: #FFD700"
+        else:
+            return "background-color: #FFA07A"
+
+    styled_df = transaction_df.style.applymap(highlight_status, subset=["status"])
+    st.dataframe(styled_df, hide_index=True, use_container_width=True)
+
+# Global Intelligence Map Tab
+with realtime_tabs[2]:
+    st.markdown("### 🗺️ **Global Intelligence Map**")
+
+    # Map type selector
+    map_type = st.selectbox(
+        "Select Intelligence View:",
+        [
+            "🌍 Global Activity",
+            "💰 Transaction Flow",
+            "🚨 Risk Hotspots",
+            "📈 Market Sentiment",
+        ],
+    )
+
+    if map_type == "🌍 Global Activity":
+        # Global activity map
+        @st.cache_data
+        def get_global_activity():
+            np.random.seed(42)
+            cities = [
+                {
+                    "city": "New York",
+                    "lat": 40.7128,
+                    "lon": -74.0060,
+                    "activity": np.random.randint(80, 120),
+                },
+                {
+                    "city": "London",
+                    "lat": 51.5074,
+                    "lon": -0.1278,
+                    "activity": np.random.randint(60, 100),
+                },
+                {
+                    "city": "Tokyo",
+                    "lat": 35.6762,
+                    "lon": 139.6503,
+                    "activity": np.random.randint(70, 110),
+                },
+                {
+                    "city": "Singapore",
+                    "lat": 1.3521,
+                    "lon": 103.8198,
+                    "activity": np.random.randint(50, 90),
+                },
+                {
+                    "city": "Sydney",
+                    "lat": -33.8688,
+                    "lon": 151.2093,
+                    "activity": np.random.randint(40, 80),
+                },
+                {
+                    "city": "Toronto",
+                    "lat": 43.6532,
+                    "lon": -79.3832,
+                    "activity": np.random.randint(45, 85),
+                },
+                {
+                    "city": "Frankfurt",
+                    "lat": 50.1109,
+                    "lon": 8.6821,
+                    "activity": np.random.randint(55, 95),
+                },
+                {
+                    "city": "Hong Kong",
+                    "lat": 22.3193,
+                    "lon": 114.1694,
+                    "activity": np.random.randint(65, 105),
+                },
             ]
 
-            for i, starter in enumerate(conversation_starters, 1):
-                st.markdown(f"**{i}.** {starter}")
+            for city in cities:
+                city["color"] = [
+                    min(255, city["activity"] * 2),
+                    100,
+                    max(50, 255 - city["activity"]),
+                    200,
+                ]
+                city["radius"] = city["activity"] * 1000
 
-        else:
-            st.warning("Please enter a valid Client ID")
+            return cities
 
-    # AI Features Overview
-    st.divider()
-    st.markdown("### 🧠 **AI Capabilities Overview**")
+        global_data = get_global_activity()
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info(
-            """
-        **🤖 Current AI Features:**
-        - Auto-generated client summaries
-        - Risk profile analysis
-        - Portfolio performance insights
-        - Conversation starters
-        - Strategic recommendations
-        """
-        )
-
-    with col2:
-        st.success(
-            """
-        **🚀 Planned AI Enhancements:**
-        - Natural language querying
-        - Predictive analytics
-        - Automated report generation
-        - Voice-to-text meeting notes
-        - Real-time market sentiment
-        """
-        )
-
-# KYC Operations Copilot
-with ai_subtabs[1]:
-    st.markdown("### 📋 KYB/KYC Operations Copilot")
-    st.caption("Speed up checks & documentation Q&A | KPIs: Cycle time, touchless rate")
-
-    kyc_insights = get_kyc_insights()
-    if not kyc_insights.empty:
-        col1, col2 = st.columns([2, 1])
-
-        with col1:
-            st.markdown("**📋 KYC Compliance Status**")
-            st.dataframe(kyc_insights, use_container_width=True)
-
-        with col2:
-            # Priority distribution
-            priority_counts = kyc_insights["PRIORITY"].value_counts()
-            fig = px.pie(
-                values=priority_counts.values,
-                names=priority_counts.index,
-                title="KYC Priority Distribution",
-                color_discrete_map={
-                    "High": "#FF4444",
-                    "Medium": "#FFA500",
-                    "Low": "#90EE90",
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style="mapbox://styles/mapbox/dark-v11",
+                initial_view_state=pdk.ViewState(
+                    latitude=20,
+                    longitude=0,
+                    zoom=1.5,
+                    pitch=30,
+                ),
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=global_data,
+                        get_position=["lon", "lat"],
+                        get_color="color",
+                        get_radius="radius",
+                        radius_scale=50,
+                        pickable=True,
+                        auto_highlight=True,
+                    )
+                ],
+                tooltip={
+                    "html": "<b>🌍 {city}</b><br/>Activity Level: {activity}",
+                    "style": {"backgroundColor": "darkblue", "color": "white"},
                 },
             )
-            st.plotly_chart(fig, use_container_width=True)
-
-        # Compliance status analysis
-        st.markdown("**📊 Compliance Status Breakdown**")
-        status_counts = kyc_insights["COMPLIANCE_STATUS"].value_counts()
-        fig2 = px.bar(
-            x=status_counts.index,
-            y=status_counts.values,
-            title="KYC Compliance Status Distribution",
-            color=status_counts.index,
         )
-        st.plotly_chart(fig2, use_container_width=True)
 
-        # AI Copilot simulation
-        st.subheader("🤖 AI-Powered Document Analysis")
         st.info(
-            """
-        **KYC Copilot Ready** - Upload client documents for instant analysis:
-        • Document completeness check
-        • Risk indicator extraction
-        • Compliance gap identification
-        • Auto-generated review summaries
-        """
+            "🌍 **Global Activity**: Real-time client activity and system usage across major financial centers."
         )
 
-        # High priority items
-        high_priority = kyc_insights[kyc_insights["PRIORITY"] == "High"]
-        if not high_priority.empty:
-            st.markdown("**🚨 High Priority KYC Items**")
-            st.error(
-                f"Found {len(high_priority)} clients requiring immediate KYC attention"
-            )
-            st.dataframe(
-                high_priority[
-                    [
-                        "CLIENT_ID",
-                        "FIRST_NAME",
-                        "LAST_NAME",
-                        "COMPLIANCE_STATUS",
-                        "DAYS_SINCE_UPDATE",
-                    ]
+    elif map_type == "💰 Transaction Flow":
+        # Transaction flow visualization
+        @st.cache_data
+        def get_transaction_flows():
+            flows = [
+                {
+                    "source_lat": 40.7128,
+                    "source_lon": -74.0060,
+                    "target_lat": 51.5074,
+                    "target_lon": -0.1278,
+                    "amount": 15000000,
+                },
+                {
+                    "source_lat": 35.6762,
+                    "source_lon": 139.6503,
+                    "target_lat": 1.3521,
+                    "target_lon": 103.8198,
+                    "amount": 8000000,
+                },
+                {
+                    "source_lat": 40.7128,
+                    "source_lon": -74.0060,
+                    "target_lat": 35.6762,
+                    "target_lon": 139.6503,
+                    "amount": 12000000,
+                },
+                {
+                    "source_lat": 51.5074,
+                    "source_lon": -0.1278,
+                    "target_lat": 50.1109,
+                    "target_lon": 8.6821,
+                    "amount": 6000000,
+                },
+                {
+                    "source_lat": 43.6532,
+                    "source_lon": -79.3832,
+                    "target_lat": 40.7128,
+                    "target_lon": -74.0060,
+                    "amount": 9000000,
+                },
+            ]
+
+            for flow in flows:
+                flow["color"] = (
+                    [0, 255, 0, 150]
+                    if flow["amount"] > 10000000
+                    else [255, 255, 0, 150]
+                )
+                flow["width"] = flow["amount"] / 1000000
+
+            return flows
+
+        transaction_flows = get_transaction_flows()
+
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style="mapbox://styles/mapbox/satellite-streets-v12",
+                initial_view_state=pdk.ViewState(
+                    latitude=35,
+                    longitude=0,
+                    zoom=1.2,
+                    pitch=40,
+                ),
+                layers=[
+                    pdk.Layer(
+                        "ArcLayer",
+                        data=transaction_flows,
+                        get_source_position=["source_lon", "source_lat"],
+                        get_target_position=["target_lon", "target_lat"],
+                        get_source_color="color",
+                        get_target_color="color",
+                        get_width="width",
+                        width_scale=1000,
+                        pickable=True,
+                    )
                 ],
-                use_container_width=True,
+                tooltip={
+                    "html": "<b>💰 Transaction Flow</b><br/>Amount: ${amount:,.0f}",
+                    "style": {"backgroundColor": "green", "color": "white"},
+                },
             )
+        )
 
-    else:
-        st.success("✅ All clients are up to date with KYC requirements.")
+        st.success(
+            "💰 **Transaction Flow**: Live capital movement and cross-border transaction patterns."
+        )
 
-# AI Insights Dashboard
-with ai_subtabs[2]:
-    st.markdown("### 🧠 AI Insights & Analytics")
+# AI Automation Tab
+with realtime_tabs[3]:
+    st.markdown("### 🤖 **AI Automation Control Center**")
 
-    # Simulated AI metrics
-    col1, col2, col3, col4 = st.columns(4)
+    # Automation status
+    automation_col1, automation_col2, automation_col3 = st.columns(3)
 
-    col1.metric("🤖 AI Recommendations", "127", delta="+23 this week")
-    col2.metric("📊 Automated Reports", "89%", delta="+5% efficiency")
-    col3.metric("⏱️ Time Saved", "47 hours", delta="Per week")
-    col4.metric("🎯 Accuracy Rate", "94.2%", delta="+2.1%")
+    with automation_col1:
+        st.markdown("**🔄 Active Automations**")
+        automations = [
+            "✅ Portfolio Rebalancing",
+            "✅ Risk Monitoring",
+            "✅ Client Alerts",
+            "✅ Compliance Checks",
+            "⏸️ Report Generation",
+        ]
+        for automation in automations:
+            st.markdown(automation)
 
-    # AI Usage Analytics
-    st.markdown("**📈 AI Feature Usage Analytics**")
+    with automation_col2:
+        st.markdown("**📊 Automation Performance**")
+        st.metric("🎯 Success Rate", "97.3%", delta="+1.2%")
+        st.metric("⚡ Avg Processing", "2.4s", delta="-0.5s")
+        st.metric("💰 Cost Savings", "$45K", delta="+$8K")
 
-    # Simulated usage data
-    ai_usage_data = pd.DataFrame(
+    with automation_col3:
+        st.markdown("**🚀 Quick Actions**")
+        if st.button("🔄 Trigger Rebalancing", use_container_width=True):
+            st.success("✅ Rebalancing automation triggered!")
+        if st.button("📊 Generate Reports", use_container_width=True):
+            st.info("📋 Report generation started...")
+        if st.button("🚨 Run Risk Scan", use_container_width=True):
+            st.warning("🔍 Risk scan initiated...")
+
+    # Automation workflow visualization
+    st.markdown("**🔄 Live Automation Workflows**")
+
+    workflow_data = {
+        "Stage": [
+            "Data Ingestion",
+            "AI Analysis",
+            "Decision Engine",
+            "Action Execution",
+            "Verification",
+        ],
+        "Status": ["✅ Complete", "⚡ Processing", "⏳ Queue", "⏸️ Pending", "📋 Ready"],
+        "Processing_Time": [0.3, 1.8, 0.6, 2.1, 0.4],
+        "Success_Rate": [99.9, 97.3, 98.7, 96.2, 99.1],
+    }
+
+    fig_workflow = go.Figure()
+
+    # Add processing time bars
+    fig_workflow.add_trace(
+        go.Bar(
+            name="Processing Time (s)",
+            x=workflow_data["Stage"],
+            y=workflow_data["Processing_Time"],
+            yaxis="y",
+            marker_color="skyblue",
+        )
+    )
+
+    # Add success rate line
+    fig_workflow.add_trace(
+        go.Scatter(
+            name="Success Rate (%)",
+            x=workflow_data["Stage"],
+            y=workflow_data["Success_Rate"],
+            yaxis="y2",
+            mode="lines+markers",
+            marker_color="green",
+            line=dict(width=3),
+        )
+    )
+
+    fig_workflow.update_layout(
+        title="Automation Pipeline Performance",
+        xaxis_title="Workflow Stage",
+        yaxis=dict(title="Processing Time (seconds)", side="left"),
+        yaxis2=dict(title="Success Rate (%)", side="right", overlaying="y"),
+        height=400,
+    )
+
+    st.plotly_chart(fig_workflow, use_container_width=True)
+
+# Performance Center Tab
+with realtime_tabs[4]:
+    st.markdown("### ⚡ **Performance Center**")
+
+    # Performance metrics grid
+    perf_col1, perf_col2 = st.columns(2)
+
+    with perf_col1:
+        st.markdown("**🚀 System Performance**")
+
+        # CPU and Memory usage
+        cpu_usage = np.random.uniform(60, 85)
+        memory_usage = np.random.uniform(45, 70)
+
+        fig_resources = go.Figure()
+
+        fig_resources.add_trace(
+            go.Indicator(
+                mode="gauge+number+delta",
+                value=cpu_usage,
+                domain={"x": [0, 0.48], "y": [0, 1]},
+                title={"text": "CPU Usage %"},
+                delta={"reference": 70},
+                gauge={
+                    "axis": {"range": [None, 100]},
+                    "bar": {"color": "darkblue"},
+                    "steps": [
+                        {"range": [0, 50], "color": "lightgray"},
+                        {"range": [50, 80], "color": "yellow"},
+                        {"range": [80, 100], "color": "red"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "red", "width": 4},
+                        "thickness": 0.75,
+                        "value": 90,
+                    },
+                },
+            )
+        )
+
+        fig_resources.add_trace(
+            go.Indicator(
+                mode="gauge+number+delta",
+                value=memory_usage,
+                domain={"x": [0.52, 1], "y": [0, 1]},
+                title={"text": "Memory Usage %"},
+                delta={"reference": 60},
+                gauge={
+                    "axis": {"range": [None, 100]},
+                    "bar": {"color": "darkgreen"},
+                    "steps": [
+                        {"range": [0, 50], "color": "lightgray"},
+                        {"range": [50, 80], "color": "yellow"},
+                        {"range": [80, 100], "color": "red"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "red", "width": 4},
+                        "thickness": 0.75,
+                        "value": 90,
+                    },
+                },
+            )
+        )
+
+        fig_resources.update_layout(height=400)
+        st.plotly_chart(fig_resources, use_container_width=True)
+
+    with perf_col2:
+        st.markdown("**📊 Performance Trends**")
+
+        # Performance trend over time
+        hours = list(range(24))
+        response_times = [np.random.uniform(0.8, 2.5) for _ in hours]
+        throughput = [np.random.uniform(800, 1500) for _ in hours]
+
+        fig_trends = go.Figure()
+
+        fig_trends.add_trace(
+            go.Scatter(
+                x=hours,
+                y=response_times,
+                mode="lines+markers",
+                name="Response Time (s)",
+                yaxis="y",
+                line=dict(color="blue"),
+            )
+        )
+
+        fig_trends.add_trace(
+            go.Scatter(
+                x=hours,
+                y=throughput,
+                mode="lines+markers",
+                name="Throughput (req/min)",
+                yaxis="y2",
+                line=dict(color="red"),
+            )
+        )
+
+        fig_trends.update_layout(
+            title="24-Hour Performance Trends",
+            xaxis_title="Hour of Day",
+            yaxis=dict(title="Response Time (s)", side="left"),
+            yaxis2=dict(title="Throughput (req/min)", side="right", overlaying="y"),
+            height=400,
+        )
+
+        st.plotly_chart(fig_trends, use_container_width=True)
+
+    # Live performance table
+    st.markdown("**📈 Live Performance Metrics**")
+
+    perf_metrics = pd.DataFrame(
         {
-            "Feature": [
-                "Wealth Narrative",
-                "KYC Copilot",
-                "Risk Analysis",
-                "Client Briefing",
-                "Document Review",
+            "Metric": [
+                "API Response Time",
+                "Database Query Time",
+                "AI Model Inference",
+                "Cache Hit Rate",
+                "Error Rate",
             ],
-            "Usage_Count": [156, 89, 234, 198, 67],
-            "Success_Rate": [94.2, 87.5, 91.8, 96.1, 88.9],
-            "Time_Saved_Hours": [23.4, 15.7, 31.2, 28.9, 8.3],
+            "Current": ["1.2s", "0.3s", "2.1s", "94.7%", "0.02%"],
+            "Target": ["<2.0s", "<0.5s", "<3.0s", ">90%", "<0.1%"],
+            "Status": ["🟢 Good", "🟢 Good", "🟢 Good", "🟢 Good", "🟢 Good"],
+            "Trend": ["↗️ +5%", "↘️ -2%", "↗️ +8%", "↗️ +1%", "↘️ -15%"],
         }
     )
 
-    col1, col2 = st.columns(2)
+    st.dataframe(perf_metrics, hide_index=True, use_container_width=True)
 
-    with col1:
-        fig1 = px.bar(
-            ai_usage_data,
-            x="Feature",
-            y="Usage_Count",
-            title="AI Feature Usage (This Month)",
-            labels={"Usage_Count": "Number of Uses"},
-        )
-        st.plotly_chart(fig1, use_container_width=True)
-
-    with col2:
-        fig2 = px.bar(
-            ai_usage_data,
-            x="Feature",
-            y="Time_Saved_Hours",
-            title="Time Saved by AI Features (Hours)",
-            labels={"Time_Saved_Hours": "Hours Saved"},
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-
-    # AI Performance Metrics
-    st.markdown("**🎯 AI Performance Metrics**")
-    st.dataframe(ai_usage_data, use_container_width=True, hide_index=True)
-
-    # AI Feedback and Learning
-    st.markdown("**📚 AI Learning & Feedback**")
-    feedback_col1, feedback_col2 = st.columns(2)
-
-    with feedback_col1:
-        st.info(
-            """
-        **🎓 Continuous Learning:**
-        - Model training on new data patterns
-        - User feedback integration
-        - Performance optimization
-        - Accuracy improvements
-        """
-        )
-
-    with feedback_col2:
-        st.success(
-            """
-        **📊 Recent Improvements:**
-        - 12% increase in recommendation accuracy
-        - 25% faster document processing
-        - Enhanced natural language understanding
-        - Better risk prediction models
-        """
-        )
-
-# AI Recommendations Engine
-with ai_subtabs[3]:
-    st.markdown("### 🎯 AI Recommendations Engine")
-
-    # Global AI Recommendations
-    st.markdown("**🧠 AI-Powered Business Insights**")
-
-    recommendations = [
-        {
-            "category": "Portfolio Optimization",
-            "recommendation": "Consider rebalancing 23 portfolios showing significant drift from target allocations",
-            "impact": "High",
-            "confidence": "94%",
-            "action": "Schedule rebalancing reviews",
-        },
-        {
-            "category": "Client Engagement",
-            "recommendation": "15 high-value clients haven't been contacted in 90+ days",
-            "impact": "High",
-            "confidence": "97%",
-            "action": "Initiate outreach campaigns",
-        },
-        {
-            "category": "Risk Management",
-            "recommendation": "7 portfolios show suitability misalignment with client risk tolerance",
-            "impact": "Critical",
-            "confidence": "91%",
-            "action": "Immediate risk assessment",
-        },
-        {
-            "category": "Revenue Optimization",
-            "recommendation": "$47M in idle cash could generate additional $1.8M annually",
-            "impact": "High",
-            "confidence": "89%",
-            "action": "Implement cash sweep programs",
-        },
-    ]
-
-    for rec in recommendations:
-        with st.expander(f"{rec['category']} - {rec['impact']} Impact", expanded=True):
-            col1, col2, col3 = st.columns([3, 1, 1])
-
-            with col1:
-                st.markdown(f"**Recommendation:** {rec['recommendation']}")
-                st.markdown(f"**Suggested Action:** {rec['action']}")
-
-            with col2:
-                if rec["impact"] == "Critical":
-                    st.error(f"Impact: {rec['impact']}")
-                elif rec["impact"] == "High":
-                    st.warning(f"Impact: {rec['impact']}")
-                else:
-                    st.info(f"Impact: {rec['impact']}")
-
-            with col3:
-                st.metric("Confidence", rec["confidence"])
-
-    # AI Action Center
-    st.markdown("**⚡ AI Action Center**")
-
-    action_col1, action_col2, action_col3 = st.columns(3)
-
-    with action_col1:
-        if st.button("🚀 Execute High-Priority Actions", use_container_width=True):
-            st.success("✅ High-priority actions queued for execution!")
-
-    with action_col2:
-        if st.button("📊 Generate AI Report", use_container_width=True):
-            st.success("✅ AI-powered report generated!")
-
-    with action_col3:
-        if st.button("🔄 Refresh AI Insights", use_container_width=True):
-            st.success("✅ AI insights refreshed!")
-
-# AI Summary
+# Footer with system status
 st.divider()
-st.markdown("### 📋 **AI & Automation Summary**")
+st.markdown(
+    """
+### 🔄 **System Status Summary**
+- **🟢 All Systems Operational** | Last Incident: None in 47 days
+- **⚡ Real-time Processing**: 1,247 events/minute | **🎯 AI Accuracy**: 94.7%
+- **🚀 Automation Level**: 89% automated workflows | **💰 Cost Optimization**: $45K/month saved
+"""
+)
 
-summary_col1, summary_col2, summary_col3 = st.columns(3)
-
-with summary_col1:
-    st.markdown("#### 🤖 **AI Utilization**")
-    st.metric("Active AI Features", "12")
-    st.metric("Weekly Usage", "1,247 actions")
-    st.metric("Automation Rate", "89%")
-
-with summary_col2:
-    st.markdown("#### ⏱️ **Efficiency Gains**")
-    st.metric("Time Saved (Weekly)", "47 hours")
-    st.metric("Cost Reduction", "23%")
-    st.metric("Accuracy Improvement", "+12%")
-
-with summary_col3:
-    st.markdown("#### 🎯 **Impact Metrics**")
-    st.metric("Client Satisfaction", "+8.7%")
-    st.metric("Advisor Productivity", "+15%")
-    st.metric("Compliance Rate", "98.2%")
+# Auto-refresh indicator
+if st.button("🔄 Force Refresh Dashboard"):
+    st.rerun()
