@@ -332,27 +332,164 @@ with advanced_tabs[0]:
         )
 
         with map_tabs[0]:
-            # Enhanced choropleth with custom styling
-            fig = px.choropleth(
-                geo_dist_df,
-                locations="STATE",
-                color="TOTAL_AUM",
-                locationmode="USA-states",
-                scope="usa",
-                title="Wealth Distribution Across States",
-                color_continuous_scale="RdYlBu_r",
-                labels={"TOTAL_AUM": "Total AUM ($)"},
-                hover_data=["MARKET_TIER"],
-            )
-            fig.update_layout(
-                height=600,
-                title_font_size=20,
-                geo=dict(
-                    showframe=False, showcoastlines=True, projection_type="albers usa"
-                ),
-            )
-            fig.update_coloraxes(colorbar_title="AUM ($)")
-            st.plotly_chart(fig, use_container_width=True)
+            # Enhanced state-level map using PyDeck (ScatterplotLayer over state centroids)
+            # Prepare state centroids for USA (lat/lon for state abbreviations)
+            state_centroids = {
+                "AL": {"lat": 32.806671, "lon": -86.791130},
+                "AK": {"lat": 61.370716, "lon": -152.404419},
+                "AZ": {"lat": 33.729759, "lon": -111.431221},
+                "AR": {"lat": 34.969704, "lon": -92.373123},
+                "CA": {"lat": 36.116203, "lon": -119.681564},
+                "CO": {"lat": 39.059811, "lon": -105.311104},
+                "CT": {"lat": 41.597782, "lon": -72.755371},
+                "DE": {"lat": 39.318523, "lon": -75.507141},
+                "DC": {"lat": 38.905985, "lon": -77.033418},
+                "FL": {"lat": 27.766279, "lon": -81.686783},
+                "GA": {"lat": 33.040619, "lon": -83.643074},
+                "HI": {"lat": 21.094318, "lon": -157.498337},
+                "ID": {"lat": 44.240459, "lon": -114.478828},
+                "IL": {"lat": 40.349457, "lon": -88.986137},
+                "IN": {"lat": 39.849426, "lon": -86.258278},
+                "IA": {"lat": 42.011539, "lon": -93.210526},
+                "KS": {"lat": 38.526600, "lon": -96.726486},
+                "KY": {"lat": 37.668140, "lon": -84.670067},
+                "LA": {"lat": 31.169546, "lon": -91.867805},
+                "ME": {"lat": 44.693947, "lon": -69.381927},
+                "MD": {"lat": 39.063946, "lon": -76.802101},
+                "MA": {"lat": 42.230171, "lon": -71.530106},
+                "MI": {"lat": 43.326618, "lon": -84.536095},
+                "MN": {"lat": 45.694454, "lon": -93.900192},
+                "MS": {"lat": 32.741646, "lon": -89.678696},
+                "MO": {"lat": 38.456085, "lon": -92.288368},
+                "MT": {"lat": 46.921925, "lon": -110.454353},
+                "NE": {"lat": 41.125370, "lon": -98.268082},
+                "NV": {"lat": 38.313515, "lon": -117.055374},
+                "NH": {"lat": 43.452492, "lon": -71.563896},
+                "NJ": {"lat": 40.298904, "lon": -74.521011},
+                "NM": {"lat": 34.840515, "lon": -106.248482},
+                "NY": {"lat": 42.165726, "lon": -74.948051},
+                "NC": {"lat": 35.630066, "lon": -79.806419},
+                "ND": {"lat": 47.528912, "lon": -99.784012},
+                "OH": {"lat": 40.388783, "lon": -82.764915},
+                "OK": {"lat": 35.565342, "lon": -96.928917},
+                "OR": {"lat": 44.572021, "lon": -122.070938},
+                "PA": {"lat": 40.590752, "lon": -77.209755},
+                "RI": {"lat": 41.680893, "lon": -71.511780},
+                "SC": {"lat": 33.856892, "lon": -80.945007},
+                "SD": {"lat": 44.299782, "lon": -99.438828},
+                "TN": {"lat": 35.747845, "lon": -86.692345},
+                "TX": {"lat": 31.054487, "lon": -97.563461},
+                "UT": {"lat": 40.150032, "lon": -111.862434},
+                "VT": {"lat": 44.045876, "lon": -72.710686},
+                "VA": {"lat": 37.769337, "lon": -78.169968},
+                "WA": {"lat": 47.400902, "lon": -121.490494},
+                "WV": {"lat": 38.491226, "lon": -80.954453},
+                "WI": {"lat": 44.268543, "lon": -89.616508},
+                "WY": {"lat": 42.755966, "lon": -107.302490},
+            }
+
+            # Merge with geographic distribution data
+            state_rows = []
+            for _, row in geo_dist_df.iterrows():
+                state_code = str(row.get("STATE", "")).upper()
+                if state_code in state_centroids:
+                    centroid = state_centroids[state_code]
+                    total_aum = float(row.get("TOTAL_AUM", 0) or 0)
+                    client_count = int(row.get("CLIENT_COUNT", 0) or 0)
+                    market_tier = str(row.get("MARKET_TIER", "N/A") or "N/A")
+                    state_rows.append(
+                        {
+                            "STATE": state_code,
+                            "lat": centroid["lat"],
+                            "lon": centroid["lon"],
+                            "TOTAL_AUM": total_aum,
+                            "CLIENT_COUNT": client_count,
+                            "MARKET_TIER": market_tier,
+                        }
+                    )
+
+            if state_rows:
+                state_df = pd.DataFrame(state_rows)
+                # Normalize AUM for color and radius
+                aum_min = float(state_df["TOTAL_AUM"].min())
+                aum_max = float(state_df["TOTAL_AUM"].max())
+                span = (aum_max - aum_min) or 1.0
+                norm = (state_df["TOTAL_AUM"] - aum_min) / span
+
+                # Color gradient: low AUM -> blue, high AUM -> red
+                state_df["color_r"] = (50 + (norm * 205)).astype(int)
+                state_df["color_g"] = (80 + (norm * 120)).astype(int)
+                state_df["color_b"] = (255 - (norm * 205)).astype(int)
+                state_df["color_a"] = 220
+
+                # Radius scaled by sqrt(AUM) for better visual distribution
+                state_df["radius"] = np.sqrt(state_df["TOTAL_AUM"].clip(lower=0)) / 50.0
+
+                # Map style mapping from sidebar selection
+                style_map = {
+                    "Light": "mapbox://styles/mapbox/light-v8",
+                    "Dark": "mapbox://styles/mapbox/dark-v11",
+                    "Satellite": "mapbox://styles/mapbox/satellite-v9",
+                    "Streets": "mapbox://styles/mapbox/streets-v12",
+                    "Outdoors": "mapbox://styles/mapbox/outdoors-v12",
+                    "Custom": "mapbox://styles/mapbox/light-v8",
+                }
+                selected_map_style = style_map.get(
+                    map_style, "mapbox://styles/mapbox/light-v8"
+                )
+
+                st.pydeck_chart(
+                    pdk.Deck(
+                        map_style=selected_map_style,
+                        initial_view_state=pdk.ViewState(
+                            latitude=37.0902,
+                            longitude=-95.7129,
+                            zoom=3.6,
+                            pitch=30,
+                        ),
+                        layers=[
+                            # Bubbles sized and colored by AUM
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=state_df,
+                                get_position=["lon", "lat"],
+                                get_fill_color=[
+                                    "color_r",
+                                    "color_g",
+                                    "color_b",
+                                    "color_a",
+                                ],
+                                get_radius="radius",
+                                radius_scale=6000,
+                                radius_min_pixels=8,
+                                radius_max_pixels=80,
+                                pickable=True,
+                                auto_highlight=True,
+                            ),
+                            # Optional labels
+                            pdk.Layer(
+                                "TextLayer",
+                                data=state_df,
+                                get_position=["lon", "lat"],
+                                get_text="STATE",
+                                get_color=[255, 255, 255, 200],
+                                get_size=14,
+                                get_alignment_baseline="bottom",
+                            ),
+                        ],
+                        tooltip={
+                            "html": "<b>{STATE}</b><br/>AUM: ${TOTAL_AUM:,.0f}<br/>Clients: {CLIENT_COUNT}<br/>Tier: {MARKET_TIER}",
+                            "style": {
+                                "backgroundColor": "rgba(0,0,0,0.8)",
+                                "color": "white",
+                            },
+                        },
+                    ),
+                    use_container_width=True,
+                    height=600,
+                )
+            else:
+                st.info("No state-level data available to plot")
 
             # State insights
             st.markdown("**📊 Top Performing States**")
