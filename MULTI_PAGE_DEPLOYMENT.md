@@ -71,8 +71,8 @@ name: sf_env
 channels:
   - snowflake
 dependencies:
-  - python=3.11
-  - streamlit=1.45.1
+  - python=3.10
+  - streamlit
   - snowflake-snowpark-python
   - pandas
   - numpy
@@ -200,7 +200,20 @@ ModuleNotFoundError: No module named 'utils.data_functions'
 - Ensure filters are stored in session state
 - Verify each page accesses shared state correctly
 
-### **Issue 4: Performance Issues**
+### **Issue 4: Python Version Compatibility**
+
+**Symptoms:**
+```
+SQL compilation error: Cannot create a Python function with the specified packages.
+Please check your packages specification and try again. 'Packages not found: - python==3.11'
+```
+
+**Solutions:**
+- Use Python 3.10 instead of 3.11 in `environment.yml`
+- Remove specific version numbers for packages to use latest compatible versions
+- Verify all packages are available in Snowflake Anaconda Channel
+
+### **Issue 5: Performance Issues**
 
 **Symptoms:**
 - Slow page loading

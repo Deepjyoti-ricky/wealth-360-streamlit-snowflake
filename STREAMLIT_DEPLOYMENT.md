@@ -9,11 +9,11 @@ When deploying to **Streamlit in Snowflake**, you need to use the `environment.y
 1. **Create environment.yml** (already provided in this repo):
    ```yaml
    name: sf_env
-   channels:
-     - snowflake
-   dependencies:
-     - python=3.11
-     - streamlit=1.45.1
+channels:
+  - snowflake
+dependencies:
+  - python=3.10
+  - streamlit
      - snowflake-snowpark-python
      - pandas
      - numpy
