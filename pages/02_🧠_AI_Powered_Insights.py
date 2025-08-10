@@ -75,36 +75,120 @@ with cortex_tabs[0]:
             help="Ask anything about your wealth management business",
         )
 
-        # Model selection with all available Cortex models
-        model_choice = st.selectbox(
-            "Select Cortex Model:",
+        # Model selection with Snowflake Cortex + External AI providers
+        st.markdown("**🤖 Multi-Provider AI Integration**")
+        model_provider = st.selectbox(
+            "Select AI Provider:",
             [
-                "llama3.1-8b (Fast, Cost-effective)",
-                "llama3.1-70b (Balanced Performance)",
-                "llama3.1-405b (Highest Quality)",
-                "llama3.2-1b (Ultra Fast)",
-                "llama3.2-3b (Fast & Efficient)",
-                "mistral-7b (Lightweight)",
-                "mistral-large (Advanced Reasoning)",
-                "mistral-large2 (Latest Mistral)",
-                "mixtral-8x7b (Mixture of Experts)",
-                "snowflake-arctic (Snowflake Native)",
-                "reka-core (Enterprise)",
-                "reka-flash (Real-time)",
-                "gemma-7b (Google)",
-                "jamba-instruct (Mamba Architecture)",
-                "jamba-1.5-mini (Compact Mamba)",
-                "jamba-1.5-large (Advanced Mamba)",
+                "🟦 Snowflake Cortex",
+                "🟢 OpenAI",
+                "🟣 Anthropic Claude",
+                "⚡ All Models",
             ],
         )
+
+        # Provider information
+        provider_info = {
+            "🟦 Snowflake Cortex": "💡 **Native Snowflake integration** - No data movement, enterprise security, cost-effective",
+            "🟢 OpenAI": "🚀 **Industry-leading performance** - GPT-4o, advanced reasoning, code generation",
+            "🟣 Anthropic Claude": "🧠 **Constitutional AI approach** - Safer, more helpful, excellent for analysis",
+            "⚡ All Models": "🌐 **Multi-provider comparison** - Compare responses across different AI providers",
+        }
+
+        st.info(provider_info[model_provider])
+
+        if model_provider == "🟦 Snowflake Cortex":
+            model_choice = st.selectbox(
+                "Select Cortex Model:",
+                [
+                    "llama3.1-8b (Fast, Cost-effective)",
+                    "llama3.1-70b (Balanced Performance)",
+                    "llama3.1-405b (Highest Quality)",
+                    "llama3.2-1b (Ultra Fast)",
+                    "llama3.2-3b (Fast & Efficient)",
+                    "mistral-7b (Lightweight)",
+                    "mistral-large (Advanced Reasoning)",
+                    "mistral-large2 (Latest Mistral)",
+                    "mixtral-8x7b (Mixture of Experts)",
+                    "snowflake-arctic (Snowflake Native)",
+                    "reka-core (Enterprise)",
+                    "reka-flash (Real-time)",
+                    "gemma-7b (Google)",
+                    "jamba-instruct (Mamba Architecture)",
+                    "jamba-1.5-mini (Compact Mamba)",
+                    "jamba-1.5-large (Advanced Mamba)",
+                ],
+            )
+        elif model_provider == "🟢 OpenAI":
+            model_choice = st.selectbox(
+                "Select OpenAI Model:",
+                [
+                    "gpt-4o (Latest & Fastest)",
+                    "gpt-4o-mini (Cost Optimized)",
+                    "gpt-4-turbo (Advanced Reasoning)",
+                    "gpt-4 (Reliable Performance)",
+                    "gpt-3.5-turbo (Fast & Efficient)",
+                    "gpt-3.5-turbo-16k (Extended Context)",
+                    "text-davinci-003 (Legacy High-Quality)",
+                    "code-davinci-002 (Code Specialized)",
+                ],
+            )
+        elif model_provider == "🟣 Anthropic Claude":
+            model_choice = st.selectbox(
+                "Select Claude Model:",
+                [
+                    "claude-3.5-sonnet (Latest & Best)",
+                    "claude-3-opus (Highest Intelligence)",
+                    "claude-3-sonnet (Balanced Performance)",
+                    "claude-3-haiku (Fast & Efficient)",
+                    "claude-2.1 (Extended Context)",
+                    "claude-2.0 (Reliable Performance)",
+                    "claude-instant-1.2 (Ultra Fast)",
+                ],
+            )
+        else:  # All Models
+            model_choice = st.selectbox(
+                "Select Any AI Model:",
+                [
+                    # Snowflake Cortex
+                    "🟦 llama3.1-405b (Cortex - Highest Quality)",
+                    "🟦 llama3.1-70b (Cortex - Balanced)",
+                    "🟦 mistral-large2 (Cortex - Latest)",
+                    "🟦 snowflake-arctic (Cortex - Native)",
+                    "🟦 mixtral-8x7b (Cortex - MoE)",
+                    # OpenAI
+                    "🟢 gpt-4o (OpenAI - Latest)",
+                    "🟢 gpt-4-turbo (OpenAI - Advanced)",
+                    "🟢 gpt-3.5-turbo (OpenAI - Fast)",
+                    # Anthropic Claude
+                    "🟣 claude-3.5-sonnet (Claude - Latest)",
+                    "🟣 claude-3-opus (Claude - Highest IQ)",
+                    "🟣 claude-3-haiku (Claude - Fast)",
+                    # Other providers
+                    "🔵 gemini-pro (Google)",
+                    "🟠 command-r+ (Cohere)",
+                    "🔴 llama2-70b (Meta)",
+                ],
+            )
 
         if st.button(
             "🧠 Generate AI Response", type="primary", use_container_width=True
         ):
-            # Simulate AI_COMPLETE response based on query type
+            # Determine response style based on selected provider
+            provider_prefix = ""
+            if "🟦" in model_choice or model_provider == "🟦 Snowflake Cortex":
+                provider_prefix = "Cortex AI"
+            elif "🟢" in model_choice or model_provider == "🟢 OpenAI":
+                provider_prefix = "OpenAI"
+            elif "🟣" in model_choice or model_provider == "🟣 Anthropic Claude":
+                provider_prefix = "Claude"
+            else:
+                provider_prefix = "AI"
+
+            # Simulate AI_COMPLETE response based on query type and provider
             ai_responses = {
-                "Risk Assessment": """
-                **Risk Analysis (Cortex AI - Llama3.1-70b):**
+                "Risk Assessment": f"""
+                **Risk Analysis ({provider_prefix} - {model_choice.split('(')[0].strip()}):**
 
                 **1. Concentration Risk (Score: 8.7/10)**
                 - 23% of portfolios exceed single-asset 30% threshold
@@ -118,8 +202,8 @@ with cortex_tabs[0]:
                 - Emerging market exposure during uncertainty
                 - Mitigation: Hedge with currency futures, reduce allocation
                 """,
-                "Client Recommendations": """
-                **Priority Client List (Cortex AI - Mistral-Large):**
+                "Client Recommendations": f"""
+                **Priority Client List ({provider_prefix} - {model_choice.split('(')[0].strip()}):**
 
                 **🔴 Immediate Action Required:**
                 1. **Sarah Chen** ($12.3M AUM) - Portfolio down 12%, needs reassurance call
@@ -130,8 +214,8 @@ with cortex_tabs[0]:
                 4. **Robert Kim** ($6.8M AUM) - Son starting college, education funding review
                 5. **Lisa Rodriguez** ($9.4M AUM) - Approaching retirement, strategy adjustment
                 """,
-                "Market Analysis": """
-                **Market Intelligence (Cortex AI - Snowflake Arctic):**
+                "Market Analysis": f"""
+                **Market Intelligence ({provider_prefix} - {model_choice.split('(')[0].strip()}):**
 
                 **Current Trends:**
                 - Technology sector leading with 12.3% YTD gains
@@ -143,8 +227,8 @@ with cortex_tabs[0]:
                 - Conservative allocations providing stability during corrections
                 - Alternative investments showing resilience (+6.8% average)
                 """,
-                "Performance Summary": """
-                **Q3 Executive Summary (Cortex AI - Llama3.1-8b):**
+                "Performance Summary": f"""
+                **Q3 Executive Summary ({provider_prefix} - {model_choice.split('(')[0].strip()}):**
 
                 **Key Achievements:**
                 - AUM growth: +5.7% ($847M → $895M)
@@ -170,46 +254,164 @@ with cortex_tabs[0]:
             """,
             )
 
-            st.success("🤖 **Cortex AI Analysis Complete:**")
+            st.success(f"🤖 **{provider_prefix} Analysis Complete:**")
             st.markdown(response)
 
-            # Show simulated SQL
-            st.markdown("**🔧 Generated SQL:**")
-            st.code(
-                f"""
+            # Add provider-specific notes
+            if "OpenAI" in provider_prefix:
+                st.info(
+                    "💡 **OpenAI Advantage**: Industry-leading language understanding and creative problem-solving capabilities"
+                )
+            elif "Claude" in provider_prefix:
+                st.info(
+                    "🧠 **Claude Advantage**: Constitutional AI approach ensures thoughtful, well-reasoned analysis with safety considerations"
+                )
+            elif "Cortex" in provider_prefix:
+                st.info(
+                    "🛡️ **Cortex Advantage**: Data stays secure within Snowflake, enterprise-grade governance, cost-effective at scale"
+                )
+
+            # Show simulated SQL/Code based on provider
+            if "Cortex" in provider_prefix:
+                st.markdown("**🔧 Generated Snowflake SQL:**")
+                st.code(
+                    f"""
 SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(
     '{model_choice.split(' ')[0]}',
     'Context: Wealth management firm with $895M AUM, 450 clients, 25 advisors.
      Query: {user_prompt[:100]}...'
 ) AS ai_response;
-            """,
-                language="sql",
-            )
+                """,
+                    language="sql",
+                )
+            elif "OpenAI" in provider_prefix:
+                st.markdown("**🔧 OpenAI API Integration:**")
+                st.code(
+                    f"""
+import openai
+
+response = openai.ChatCompletion.create(
+    model="{model_choice.split(' ')[0]}",
+    messages=[
+        {{"role": "system", "content": "You are a wealth management AI assistant."}},
+        {{"role": "user", "content": "{user_prompt[:100]}..."}}
+    ],
+    temperature=0.3
+)
+                """,
+                    language="python",
+                )
+            elif "Claude" in provider_prefix:
+                st.markdown("**🔧 Anthropic Claude Integration:**")
+                st.code(
+                    f"""
+import anthropic
+
+client = anthropic.Anthropic(api_key="your-api-key")
+response = client.messages.create(
+    model="{model_choice.split(' ')[0]}",
+    max_tokens=1000,
+    messages=[
+        {{"role": "user", "content": "{user_prompt[:100]}..."}}
+    ]
+)
+                """,
+                    language="python",
+                )
 
     with col2:
         st.markdown("**📊 Model Performance**")
 
-        # Model comparison metrics
-        model_metrics = pd.DataFrame(
-            {
-                "Model": ["llama3.1-8b", "llama3.1-70b", "mistral-large", "arctic"],
-                "Speed (sec)": [0.8, 2.1, 1.5, 1.2],
-                "Accuracy (%)": [87.3, 94.7, 92.1, 89.6],
-                "Cost ($/1K tokens)": [0.002, 0.008, 0.006, 0.003],
-            }
-        )
+        # Multi-provider model comparison metrics
+        if model_provider == "🟦 Snowflake Cortex":
+            model_metrics = pd.DataFrame(
+                {
+                    "Model": ["llama3.1-8b", "llama3.1-70b", "mistral-large", "arctic"],
+                    "Speed (sec)": [0.8, 2.1, 1.5, 1.2],
+                    "Accuracy (%)": [87.3, 94.7, 92.1, 89.6],
+                    "Cost ($/1K tokens)": [0.002, 0.008, 0.006, 0.003],
+                }
+            )
+        elif model_provider == "🟢 OpenAI":
+            model_metrics = pd.DataFrame(
+                {
+                    "Model": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-4"],
+                    "Speed (sec)": [1.2, 2.8, 0.9, 2.1],
+                    "Accuracy (%)": [96.2, 95.1, 89.7, 94.8],
+                    "Cost ($/1K tokens)": [0.015, 0.020, 0.003, 0.018],
+                }
+            )
+        elif model_provider == "🟣 Anthropic Claude":
+            model_metrics = pd.DataFrame(
+                {
+                    "Model": [
+                        "claude-3.5-sonnet",
+                        "claude-3-opus",
+                        "claude-3-haiku",
+                        "claude-2.1",
+                    ],
+                    "Speed (sec)": [1.5, 3.2, 0.7, 1.8],
+                    "Accuracy (%)": [95.8, 97.1, 88.4, 92.3],
+                    "Cost ($/1K tokens)": [0.012, 0.025, 0.004, 0.010],
+                }
+            )
+        else:  # All Models
+            model_metrics = pd.DataFrame(
+                {
+                    "Model": [
+                        "🟦 llama3.1-405b",
+                        "🟢 gpt-4o",
+                        "🟣 claude-3.5-sonnet",
+                        "🟦 arctic",
+                        "🟢 gpt-3.5-turbo",
+                    ],
+                    "Speed (sec)": [4.2, 1.2, 1.5, 1.2, 0.9],
+                    "Accuracy (%)": [96.8, 96.2, 95.8, 89.6, 89.7],
+                    "Cost ($/1K tokens)": [0.015, 0.015, 0.012, 0.003, 0.003],
+                    "Provider": ["Cortex", "OpenAI", "Claude", "Cortex", "OpenAI"],
+                }
+            )
 
         st.dataframe(model_metrics, hide_index=True)
 
-        st.markdown("**🎯 Use Cases:**")
-        st.markdown(
+        st.markdown("**🎯 Recommended Use Cases:**")
+
+        if model_provider == "🟦 Snowflake Cortex":
+            st.markdown(
+                """
+            - **Fast responses**: llama3.1-8b
+            - **Complex analysis**: llama3.1-70b
+            - **Reasoning tasks**: mistral-large
+            - **Native integration**: arctic
             """
-        - **Fast responses**: llama3.1-8b
-        - **Complex analysis**: llama3.1-70b
-        - **Reasoning tasks**: mistral-large
-        - **Snowflake native**: arctic
-        """
-        )
+            )
+        elif model_provider == "🟢 OpenAI":
+            st.markdown(
+                """
+            - **Creative tasks**: gpt-4o
+            - **Technical analysis**: gpt-4-turbo
+            - **High-volume queries**: gpt-3.5-turbo
+            - **Code generation**: gpt-4
+            """
+            )
+        elif model_provider == "🟣 Anthropic Claude":
+            st.markdown(
+                """
+            - **Analysis & research**: claude-3.5-sonnet
+            - **Complex reasoning**: claude-3-opus
+            - **Speed-critical**: claude-3-haiku
+            - **Long documents**: claude-2.1
+            """
+            )
+        else:  # All Models
+            st.markdown(
+                """
+            - **Highest accuracy**: 🟣 claude-3-opus
+            - **Best balance**: 🟢 gpt-4o
+            - **Most cost-effective**: 🟦 arctic
+            - **Fastest**: 🟢 gpt-3.5-turbo
+            """
+            )
 
 # AI_CLASSIFY Demonstration
 with cortex_tabs[1]:
