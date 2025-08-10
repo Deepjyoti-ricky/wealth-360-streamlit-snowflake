@@ -203,42 +203,44 @@ with col1:
         """
     ### 🎯 **Getting Started**
 
-    This multi-page application provides comprehensive BFSI analytics:
+    This AI-native application showcases Snowflake Cortex capabilities:
 
-    📊 **Executive Dashboard** - Start here for high-level insights
+    🎯 **Business Overview** - AI-powered executive dashboard with Cortex insights
 
-    👥 **Client Analytics** - Deep dive into customer insights
+    🧠 **AI-Powered Insights** - Live Snowflake Cortex AI demonstrations
 
-    🎯 **Portfolio Management** - Risk and performance analytics
+    📊 **Analytics Deep Dive** - Advanced portfolio and risk analytics
 
-    🤖 **AI & Automation** - Advanced AI-powered features
+    ⚡ **Real-Time Intelligence** - Live monitoring and automated workflows
 
-    🌍 **Geographic Insights** - Geospatial analytics and maps
+    🚀 **Advanced Capabilities** - Geospatial analytics and predictive models
     """
     )
 
 with col2:
     st.markdown(
         """
-    ### 📋 **Use Case Overview**
+    ### 🧠 **Cortex AI Capabilities**
 
-    **Customer Analytics:**
-    - Customer 360 & Segmentation
-    - Next Best Action Recommendations
-    - Churn Early Warning System
-    - Event-Driven Outreach
-    - Sentiment Analysis
+    **AI_COMPLETE:**
+    - Natural language business queries
+    - Risk assessment and insights
+    - Executive summaries and reports
 
-    **Portfolio Management:**
-    - Suitability & Risk Drift Alerts
-    - Portfolio Drift & Rebalancing
-    - Idle Cash Analysis
-    - Transaction Anomaly Detection
+    **AI_CLASSIFY:**
+    - Automatic interaction categorization
+    - Risk level classification
+    - Client segmentation
 
-    **AI-Powered Features:**
-    - Wealth Narrative Generation
-    - KYC Operations Copilot
-    - Advisor Productivity Analytics
+    **AI_SENTIMENT:**
+    - Real-time feedback analysis
+    - Client satisfaction monitoring
+    - Complaint detection and routing
+
+    **AI_SUMMARIZE_AGG:**
+    - Multi-document aggregation
+    - Portfolio performance summaries
+    - Market trend analysis
     """
     )
 

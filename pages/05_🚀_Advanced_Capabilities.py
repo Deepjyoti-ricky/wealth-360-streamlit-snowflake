@@ -17,9 +17,9 @@ from utils.data_functions import get_client_geographic_distribution
 st.set_page_config(page_title="Geographic Insights", page_icon="🌍", layout="wide")
 
 # Page header
-st.markdown("# 🌍 Geographic Insights & Climate Risk")
+st.markdown("# 🚀 Advanced Capabilities")
 st.caption(
-    "🗺️ **Location-based insights using Snowflake Weather & POI data | KPIs: Geographic AUM distribution, climate risk exposure, market penetration**"
+    "🚀 **Advanced analytics: geospatial intelligence, climate risk, and predictive modeling with Snowflake Marketplace data**"
 )
 
 # Geographic Distribution Analysis

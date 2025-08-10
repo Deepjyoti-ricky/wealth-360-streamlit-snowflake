@@ -21,9 +21,9 @@ from utils.data_functions import (
 st.set_page_config(page_title="Portfolio Management", page_icon="🎯", layout="wide")
 
 # Page header
-st.markdown("# 🎯 Portfolio Management & Risk Analytics")
+st.markdown("# 📊 Analytics Deep Dive")
 st.caption(
-    "📊 **Comprehensive portfolio analytics: risk monitoring, drift analysis, and performance optimization**"
+    "📊 **Advanced portfolio analytics enhanced by Cortex AI: risk monitoring, drift analysis, and performance optimization**"
 )
 
 # Sub-navigation within Portfolio Management

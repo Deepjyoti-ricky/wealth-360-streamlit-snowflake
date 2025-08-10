@@ -5,9 +5,9 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Snowflake](https://img.shields.io/badge/Snowflake-Ready-blue.svg)](https://www.snowflake.com/)
 
-**Enterprise-grade wealth management analytics platform** built for Banking, Financial Services & Insurance (BFSI) organizations. Leverages **Snowflake's advanced analytics capabilities** with **Streamlit in Snowflake** for native deployment.
+**AI-native wealth management analytics platform** built for Banking, Financial Services & Insurance (BFSI) organizations. Showcases **Snowflake Cortex AI** capabilities with **Streamlit in Snowflake** for enterprise-ready deployment.
 
-> 🚀 **Latest Update**: **Multi-Page Architecture** - Redesigned entire application with modular page structure, enhanced navigation, and professional UI/UX for enterprise deployment.
+> 🧠 **Major Update**: **Cortex AI Integration** - Complete redesign featuring Snowflake Cortex AI (AI_COMPLETE, AI_CLASSIFY, AI_SENTIMENT) with professional demo flow for Sales Engineers.
 
 ## ✨ Platform Highlights
 

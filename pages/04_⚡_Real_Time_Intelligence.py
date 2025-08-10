@@ -16,9 +16,9 @@ from utils.data_functions import generate_wealth_narrative, get_kyc_insights
 st.set_page_config(page_title="AI & Automation", page_icon="🤖", layout="wide")
 
 # Page header
-st.markdown("# 🤖 AI & Automation")
+st.markdown("# ⚡ Real-Time Intelligence")
 st.caption(
-    "🧠 **Advanced AI-powered features for wealth management automation and insights**"
+    "⚡ **Live monitoring and automated workflows powered by Cortex AI intelligence**"
 )
 
 # Sub-navigation within AI & Automation
