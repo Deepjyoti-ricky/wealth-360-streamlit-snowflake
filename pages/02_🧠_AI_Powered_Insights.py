@@ -73,14 +73,26 @@ with cortex_tabs[0]:
             help="Ask anything about your wealth management business",
         )
 
-        # Model selection
+        # Model selection with all available Cortex models
         model_choice = st.selectbox(
             "Select Cortex Model:",
             [
                 "llama3.1-8b (Fast, Cost-effective)",
-                "llama3.1-70b (Balanced)",
+                "llama3.1-70b (Balanced Performance)",
+                "llama3.1-405b (Highest Quality)",
+                "llama3.2-1b (Ultra Fast)",
+                "llama3.2-3b (Fast & Efficient)",
+                "mistral-7b (Lightweight)",
                 "mistral-large (Advanced Reasoning)",
+                "mistral-large2 (Latest Mistral)",
+                "mixtral-8x7b (Mixture of Experts)",
                 "snowflake-arctic (Snowflake Native)",
+                "reka-core (Enterprise)",
+                "reka-flash (Real-time)",
+                "gemma-7b (Google)",
+                "jamba-instruct (Mamba Architecture)",
+                "jamba-1.5-mini (Compact Mamba)",
+                "jamba-1.5-large (Advanced Mamba)",
             ],
         )
 
