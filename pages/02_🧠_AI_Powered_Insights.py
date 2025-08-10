@@ -134,6 +134,15 @@ with cortex_tabs[0]:
 
         # Model selection with Snowflake Cortex + External AI providers
         st.markdown("**🤖 Multi-Provider AI Integration**")
+        with st.expander("ℹ️ Availability & Governance (Cortex)", expanded=False):
+            st.markdown(
+                """
+                - Available to accounts in select regions. Model availability may vary by region.
+                - Models from OpenAI, Anthropic, Meta, Mistral AI, and DeepSeek are fully hosted in Snowflake; data stays in place.
+                - Individual AISQL functions may be GA or Preview. Verify function status before production use.
+                """
+            )
+            st.caption("Source: Snowflake Cortex AISQL documentation")
         model_provider = st.selectbox(
             "Select AI Provider:",
             [
@@ -146,10 +155,10 @@ with cortex_tabs[0]:
 
         # Provider information
         provider_info = {
-            "🟦 Snowflake Cortex": "💡 **Native Snowflake integration** - No data movement, enterprise security, cost-effective",
-            "🟢 OpenAI": "🚀 **Industry-leading performance** - GPT-4o, advanced reasoning, code generation",
-            "🟣 Anthropic Claude": "🧠 **Constitutional AI approach** - Safer, more helpful, excellent for analysis",
-            "⚡ All Models": "🌐 **Multi-provider comparison** - Compare responses across different AI providers",
+            "🟦 Snowflake Cortex": "💡 **Hosted in Snowflake** (OpenAI/Anthropic/Meta/Mistral/DeepSeek) — governed, secure, cost-effective",
+            "🟢 OpenAI": "🚀 External API example — for governed workloads, prefer Cortex-hosted models",
+            "🟣 Anthropic Claude": "🧠 External API example — Cortex-hosted Claude-compatible models keep data in Snowflake",
+            "⚡ All Models": "🌐 Comparison view — highlights trade-offs; pick Cortex-hosted for production",
         }
 
         st.info(provider_info[model_provider])
@@ -168,8 +177,7 @@ with cortex_tabs[0]:
                     "mistral-large2 (Latest Mistral)",
                     "mixtral-8x7b (Mixture of Experts)",
                     "snowflake-arctic (Snowflake Native)",
-                    "reka-core (Enterprise)",
-                    "reka-flash (Real-time)",
+                    "deepseek (Reasoning)",
                     "gemma-7b (Google)",
                     "jamba-instruct (Mamba Architecture)",
                     "jamba-1.5-mini (Compact Mamba)",
@@ -315,17 +323,17 @@ with cortex_tabs[0]:
             st.markdown(response)
 
             # Add provider-specific notes
-            if "OpenAI" in provider_prefix:
+            if "Cortex" in provider_prefix:
                 st.info(
-                    "💡 **OpenAI Advantage**: Industry-leading language understanding and creative problem-solving capabilities"
+                    "🛡️ **Cortex Advantage**: Data stays secure within Snowflake, enterprise-grade governance, cost-effective at scale"
+                )
+            elif "OpenAI" in provider_prefix:
+                st.info(
+                    "💡 **OpenAI (External API)**: Example integration; for governed deployments use Cortex-hosted models"
                 )
             elif "Claude" in provider_prefix:
                 st.info(
-                    "🧠 **Claude Advantage**: Constitutional AI approach ensures thoughtful, well-reasoned analysis with safety considerations"
-                )
-            elif "Cortex" in provider_prefix:
-                st.info(
-                    "🛡️ **Cortex Advantage**: Data stays secure within Snowflake, enterprise-grade governance, cost-effective at scale"
+                    "🧠 **Claude (External API)**: Example integration; use Cortex-hosted Claude-compatible models for in-platform governance"
                 )
 
             # Show simulated SQL/Code based on provider
