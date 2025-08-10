@@ -1231,7 +1231,7 @@ def get_advisor_territory_coverage() -> pd.DataFrame:
             JOIN CLIENTS c ON acr.CLIENT_ID = c.CLIENT_ID
             LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
             WHERE c.STATE IS NOT NULL
-            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+            GROUP BY 1, 2, 3, 4, 5, 6, 7, 9
         ),
         territory_metrics AS (
             SELECT ag.ADVISOR_ID, ag.ADVISOR_NAME, ag.SPECIALIZATION,
@@ -2190,7 +2190,30 @@ with tabs[12]:
         # Interactive Mapbox visualization for client locations
         st.subheader("🗺️ Interactive Client Location Map")
         client_locations_df = get_client_location_details()
+
+        # Debug information
+        st.write(f"**Data loaded**: {len(client_locations_df)} client locations found")
         if not client_locations_df.empty:
+            st.write(f"**Columns**: {list(client_locations_df.columns)}")
+            # Check for required columns
+            required_cols = [
+                "LATITUDE",
+                "LONGITUDE",
+                "PORTFOLIO_VALUE",
+                "RISK_TOLERANCE",
+                "CLIENT_NAME",
+            ]
+            missing_cols = [
+                col for col in required_cols if col not in client_locations_df.columns
+            ]
+            if missing_cols:
+                st.error(f"Missing required columns: {missing_cols}")
+            else:
+                st.success("All required columns present for mapping")
+
+        if not client_locations_df.empty and all(
+            col in client_locations_df.columns for col in ["LATITUDE", "LONGITUDE"]
+        ):
             # Create scatter mapbox without token (uses open street map)
             fig_mapbox = px.scatter_mapbox(
                 client_locations_df,
