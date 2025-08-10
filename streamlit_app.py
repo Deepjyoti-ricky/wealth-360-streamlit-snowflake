@@ -28,23 +28,35 @@ st.markdown(
 <style>
     .main-header {
         background: linear-gradient(90deg, #1f4e79, #2e7dd2);
-        padding: 20px;
-        border-radius: 10px;
+        padding: 24px;
+        border-radius: 12px;
         margin-bottom: 20px;
         color: white;
         text-align: center;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.12);
     }
-    .metric-card {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #2e7dd2;
-        margin: 10px 0;
+    .card {
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 18px 18px 8px 18px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+    .metric-row .stMetric {
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+    .section-title {
+        margin-top: 6px;
+        margin-bottom: 10px;
     }
     .sidebar-section {
         background: #f8f9fa;
         padding: 10px;
-        border-radius: 5px;
+        border-radius: 8px;
         margin: 10px 0;
         border: 1px solid #e9ecef;
     }
@@ -196,53 +208,98 @@ st.session_state.concentration_threshold = concentration_pct / 100.0
 # Main content area
 st.markdown("## 🚀 **Welcome to Your Analytics Platform**")
 
-col1, col2 = st.columns(2)
+# Executive Snapshot (center metrics)
+with st.container():
+    st.markdown(
+        "<div class='section-title'><h4>📈 Executive Snapshot</h4></div>",
+        unsafe_allow_html=True,
+    )
+    m1, m2, m3, m4 = st.columns(4)
+    try:
+        kpis = get_global_kpis()
+        total_clients = f"{kpis.get('num_clients', 0):,}"
+        total_aum = f"${kpis.get('aum', 0):,.0f}"
+        avg_portfolio_val = 0
+        if kpis.get("num_clients", 0):
+            avg_portfolio_val = kpis.get("aum", 0) / max(kpis.get("num_clients", 1), 1)
+        avg_portfolio = f"${avg_portfolio_val:,.0f}"
+        ytd = kpis.get("ytd_growth_pct")
+        ytd_text = (
+            f"{ytd*100:.2f}%"
+            if isinstance(ytd, (int, float)) and ytd is not None
+            else "N/A"
+        )
+        with m1:
+            st.metric("👥 Total Clients", total_clients)
+        with m2:
+            st.metric("💰 Total AUM", total_aum)
+        with m3:
+            st.metric("📈 Avg Portfolio", avg_portfolio)
+        with m4:
+            st.metric("📊 YTD Growth", ytd_text)
+    except Exception:
+        with m1:
+            st.metric("👥 Total Clients", "—")
+        with m2:
+            st.metric("💰 Total AUM", "—")
+        with m3:
+            st.metric("📈 Avg Portfolio", "—")
+        with m4:
+            st.metric("📊 YTD Growth", "—")
 
-with col1:
+# Quick Navigation buttons
+st.markdown("\n")
+navc1, navc2, navc3, navc4, navc5 = st.columns([1, 1, 1, 1, 1])
+with navc1:
+    if st.button("🎯 Business Overview", use_container_width=True):
+        st.switch_page("pages/01_🎯_Business_Overview.py")
+with navc2:
+    if st.button("🧠 AI Insights", use_container_width=True):
+        st.switch_page("pages/02_🧠_AI_Powered_Insights.py")
+with navc3:
+    if st.button("📊 Analytics Deep Dive", use_container_width=True):
+        st.switch_page("pages/03_📊_Analytics_Deep_Dive.py")
+with navc4:
+    if st.button("⚡ Real-Time Intelligence", use_container_width=True):
+        st.switch_page("pages/04_⚡_Real_Time_Intelligence.py")
+with navc5:
+    if st.button("🚀 Advanced Capabilities", use_container_width=True):
+        st.switch_page("pages/05_🚀_Advanced_Capabilities.py")
+
+st.markdown("\n")
+
+# Two-card intro
+intro_left, intro_right = st.columns(2)
+with intro_left:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown(
         """
-    ### 🎯 **Getting Started**
+        ### 🎯 **Getting Started**
 
-    This AI-native application showcases Snowflake Cortex capabilities:
+        This AI-native application showcases Snowflake Cortex capabilities:
 
-    🎯 **Business Overview** - AI-powered executive dashboard with Cortex insights
-
-    🧠 **AI-Powered Insights** - Live Snowflake Cortex AI demonstrations
-
-    📊 **Analytics Deep Dive** - Advanced portfolio and risk analytics
-
-    ⚡ **Real-Time Intelligence** - Live monitoring and automated workflows
-
-    🚀 **Advanced Capabilities** - Geospatial analytics and predictive models
-    """
+        - **Business Overview**: AI-powered executive dashboard with Cortex insights
+        - **AI-Powered Insights**: Live Snowflake Cortex AI demonstrations
+        - **Analytics Deep Dive**: Advanced portfolio and risk analytics
+        - **Real-Time Intelligence**: Live monitoring and automated workflows
+        - **Advanced Capabilities**: Geospatial analytics and predictive models
+        """
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with col2:
+with intro_right:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown(
         """
-    ### 🧠 **Cortex AI Capabilities**
+        ### 🧠 **Cortex AI Capabilities**
 
-    **AI_COMPLETE:**
-    - Natural language business queries
-    - Risk assessment and insights
-    - Executive summaries and reports
-
-    **AI_CLASSIFY:**
-    - Automatic interaction categorization
-    - Risk level classification
-    - Client segmentation
-
-    **AI_SENTIMENT:**
-    - Real-time feedback analysis
-    - Client satisfaction monitoring
-    - Complaint detection and routing
-
-    **AI_SUMMARIZE_AGG:**
-    - Multi-document aggregation
-    - Portfolio performance summaries
-    - Market trend analysis
-    """
+        - **AI_COMPLETE**: Natural language business queries, risk assessment
+        - **AI_CLASSIFY**: Automatic categorization and risk-level tagging
+        - **AI_SENTIMENT**: Real-time feedback and complaint routing
+        - **AI_SUMMARIZE_AGG**: Cross-document summaries and market analysis
+        """
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # Platform Overview moved from Business Overview page
 st.markdown("---")
