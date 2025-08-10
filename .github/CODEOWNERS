@@ -1,0 +1,27 @@
+# CODEOWNERS file for BFSI Wealth 360 Analytics Platform
+#
+# This file defines who is responsible for code in this repository.
+# More info: https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+
+# Global owners - these users will be requested for review on all PRs
+* @Deepjyoti-ricky
+
+# Streamlit application
+streamlit_app.py @Deepjyoti-ricky
+
+# Documentation
+README.md @Deepjyoti-ricky
+CONTRIBUTING.md @Deepjyoti-ricky
+*.md @Deepjyoti-ricky
+
+# GitHub workflows and templates
+.github/ @Deepjyoti-ricky
+
+# Configuration files
+requirements*.txt @Deepjyoti-ricky
+setup.cfg @Deepjyoti-ricky
+.pre-commit-config.yaml @Deepjyoti-ricky
+
+# Data model and semantic files
+*.yaml @Deepjyoti-ricky
+*.yml @Deepjyoti-ricky
