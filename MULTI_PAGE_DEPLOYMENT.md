@@ -66,18 +66,32 @@ In Snowsight Streamlit editor:
 
 Upload the `environment.yml` file with these dependencies:
 
+**Option 1: With Python Version (Recommended)**
 ```yaml
 name: sf_env
 channels:
   - snowflake
 dependencies:
-  - python=3.10
+  - python=3.9
   - streamlit
   - snowflake-snowpark-python
   - pandas
   - numpy
   - plotly
   - pydeck
+```
+
+**Option 2: Minimal (Let Snowflake choose Python version)**
+```yaml
+name: sf_env
+channels:
+  - snowflake
+dependencies:
+  - pandas
+  - numpy
+  - plotly
+  - pydeck
+  - snowflake-snowpark-python
 ```
 
 ### **Step 4: Deploy and Test**
@@ -205,13 +219,19 @@ ModuleNotFoundError: No module named 'utils.data_functions'
 **Symptoms:**
 ```
 SQL compilation error: Cannot create a Python function with the specified packages.
-Please check your packages specification and try again. 'Packages not found: - python==3.11'
+Please check your packages specification and try again. 'Packages not found: - python==X.Y'
 ```
 
 **Solutions:**
-- Use Python 3.10 instead of 3.11 in `environment.yml`
-- Remove specific version numbers for packages to use latest compatible versions
-- Verify all packages are available in Snowflake Anaconda Channel
+- **Use Python 3.9** - Currently the most stable version supported by all packages
+- **Or remove Python version entirely** and let Snowflake choose automatically
+- **Current compatibility matrix (as of latest error):**
+  - pandas: 3.8, 3.9, 3.11, 3.12, 3.13
+  - snowflake-snowpark-python: 3.8, 3.9, 3.11, 3.12
+  - pydeck: 3.8, 3.9, 3.11, 3.12, 3.13
+  - plotly: 3.8, 3.9, 3.11, 3.12, 3.13
+  - numpy: 3.8, 3.9, 3.11, 3.12, 3.13
+- **Recommendation:** Use `python=3.9` as it's supported by ALL packages
 
 ### **Issue 5: Performance Issues**
 

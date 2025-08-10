@@ -1,0 +1,18 @@
+# Minimal Snowflake environment configuration for Streamlit in Snowflake
+# This file specifies only the essential packages, letting Snowflake choose the Python version
+
+name: sf_env
+channels:
+  - snowflake
+
+dependencies:
+  # Data processing and analytics
+  - pandas
+  - numpy
+
+  # Visualization packages
+  - plotly
+  - pydeck
+
+  # Snowpark is usually pre-installed in Streamlit in Snowflake
+  - snowflake-snowpark-python

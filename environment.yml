@@ -7,7 +7,7 @@ channels:
 
 dependencies:
   # Core Streamlit and Snowflake packages (pre-installed)
-  - python=3.10
+  - python=3.9
   - streamlit
   - snowflake-snowpark-python
 

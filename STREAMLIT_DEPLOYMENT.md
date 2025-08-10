@@ -12,7 +12,7 @@ When deploying to **Streamlit in Snowflake**, you need to use the `environment.y
 channels:
   - snowflake
 dependencies:
-  - python=3.10
+  - python=3.9
   - streamlit
      - snowflake-snowpark-python
      - pandas
