@@ -782,39 +782,50 @@ def get_idle_cash_analysis() -> pd.DataFrame:
 
 
 def get_trade_fee_anomalies() -> pd.DataFrame:
-    """Trade & Fee Anomaly Detection - Catch leakage, waivers, outliers"""
+    """Trade & Transaction Anomaly Detection - Catch unusual patterns and outliers"""
 
     sql = """
-        WITH fee_stats AS (
+        WITH transaction_stats AS (
             SELECT TRANSACTION_TYPE,
-                   AVG(FEE_AMOUNT) AS AVG_FEE,
-                   STDDEV(FEE_AMOUNT) AS STDDEV_FEE,
-                   COUNT(*) AS TRANSACTION_COUNT
+                   AVG(TOTAL_AMOUNT) AS AVG_AMOUNT,
+                   STDDEV(TOTAL_AMOUNT) AS STDDEV_AMOUNT,
+                   COUNT(*) AS TRANSACTION_COUNT,
+                   PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY TOTAL_AMOUNT) AS P95_AMOUNT
             FROM TRANSACTIONS
-            WHERE FEE_AMOUNT IS NOT NULL AND FEE_AMOUNT > 0
+            WHERE TOTAL_AMOUNT > 0
             GROUP BY 1
         ),
+        portfolio_clients AS (
+            SELECT p.PORTFOLIO_ID, p.CLIENT_ID
+            FROM PORTFOLIOS p
+        ),
         anomalies AS (
-            SELECT t.TRANSACTION_ID, t.CLIENT_ID, t.PORTFOLIO_ID,
-                   t.TRANSACTION_TYPE, t.TRANSACTION_AMOUNT, t.FEE_AMOUNT,
-                   t.TIMESTAMP,
-                   fs.AVG_FEE, fs.STDDEV_FEE,
+            SELECT t.TRANSACTION_ID, pc.CLIENT_ID, t.PORTFOLIO_ID,
+                   t.TRANSACTION_TYPE, t.TOTAL_AMOUNT, t.QUANTITY, t.PRICE,
+                   t.TIMESTAMP, t.TICKER,
+                   ts.AVG_AMOUNT, ts.STDDEV_AMOUNT, ts.P95_AMOUNT,
                    CASE
-                       WHEN t.FEE_AMOUNT = 0 AND t.TRANSACTION_AMOUNT > 10000 THEN 'Zero Fee on Large Trade'
-                       WHEN t.FEE_AMOUNT > fs.AVG_FEE + 3 * fs.STDDEV_FEE THEN 'Unusually High Fee'
-                       WHEN t.FEE_AMOUNT < fs.AVG_FEE - 2 * fs.STDDEV_FEE AND t.FEE_AMOUNT > 0 THEN 'Unusually Low Fee'
-                       WHEN t.TRANSACTION_AMOUNT > 1000000 AND t.FEE_AMOUNT / t.TRANSACTION_AMOUNT < 0.001 THEN 'Large Trade Low Fee Rate'
+                       WHEN t.TOTAL_AMOUNT > ts.P95_AMOUNT * 2 THEN 'Unusually Large Transaction'
+                       WHEN t.TOTAL_AMOUNT > ts.AVG_AMOUNT + 3 * ts.STDDEV_AMOUNT THEN 'Statistical Outlier - High Value'
+                       WHEN t.PRICE = 0 AND t.TOTAL_AMOUNT > 0 THEN 'Zero Price with Value'
+                       WHEN t.QUANTITY = 0 AND t.TOTAL_AMOUNT > 0 THEN 'Zero Quantity with Value'
+                       WHEN t.TOTAL_AMOUNT > 1000000 AND t.TRANSACTION_TYPE = 'Buy' THEN 'Large Buy Transaction'
+                       WHEN ABS(t.TOTAL_AMOUNT - (t.QUANTITY * t.PRICE)) > t.TOTAL_AMOUNT * 0.05 THEN 'Price-Quantity Mismatch'
                        ELSE 'Normal'
                    END AS ANOMALY_TYPE
             FROM TRANSACTIONS t
-            LEFT JOIN fee_stats fs ON t.TRANSACTION_TYPE = fs.TRANSACTION_TYPE
+            LEFT JOIN transaction_stats ts ON t.TRANSACTION_TYPE = ts.TRANSACTION_TYPE
+            LEFT JOIN portfolio_clients pc ON t.PORTFOLIO_ID = pc.PORTFOLIO_ID
             WHERE t.TIMESTAMP >= DATEADD(DAY, -90, CURRENT_DATE)
         )
-        SELECT a.*, c.FIRST_NAME, c.LAST_NAME,
-               ROUND(a.FEE_AMOUNT / NULLIF(a.TRANSACTION_AMOUNT, 0) * 100, 4) AS FEE_RATE_PCT,
-               ROUND(a.AVG_FEE - a.FEE_AMOUNT, 2) AS FEE_DIFFERENCE
+        SELECT a.TRANSACTION_ID, a.CLIENT_ID, a.PORTFOLIO_ID,
+               a.TRANSACTION_TYPE, a.TOTAL_AMOUNT, a.QUANTITY, a.PRICE,
+               a.TIMESTAMP, a.TICKER, a.ANOMALY_TYPE,
+               c.FIRST_NAME, c.LAST_NAME,
+               ROUND((a.TOTAL_AMOUNT / NULLIF(a.AVG_AMOUNT, 0) - 1) * 100, 2) AS DEVIATION_FROM_AVG_PCT,
+               ROUND(a.TOTAL_AMOUNT - a.AVG_AMOUNT, 2) AS AMOUNT_DIFFERENCE
         FROM anomalies a
-        JOIN CLIENTS c ON a.CLIENT_ID = c.CLIENT_ID
+        LEFT JOIN CLIENTS c ON a.CLIENT_ID = c.CLIENT_ID
         WHERE a.ANOMALY_TYPE <> 'Normal'
         ORDER BY a.TIMESTAMP DESC
     """
@@ -1044,7 +1055,7 @@ with st.expander(
     | ⚖️ **Suitability & Risk Drift Alerts** | Ensure portfolio aligns to risk tolerance | CLIENTS (RISK_TOLERANCE), PORTFOLIOS, POSITION_HISTORY | Suitability breaches, time-to-remediate | Med / 3–5 wks |
     | 📊 **Portfolio Drift & Rebalance** | Alert on asset-class drift vs strategy | PORTFOLIOS, POSITION_HISTORY | Drift % over threshold, rebalance yield | Med / 3–5 wks |
     | 💰 **Idle Cash / Cash-Sweep** | Monetize idle balances | ACCOUNT_HISTORY, POSITION_HISTORY | Cash ratio, NII uplift | Low / 1–2 wks |
-    | 🔍 **Trade & Fee Anomaly Detection** | Catch leakage/waivers/outliers | TRANSACTIONS | Fee recovery, false-positive rate | Med / 2–4 wks |
+    | 🔍 **Trade & Transaction Anomaly Detection** | Catch unusual patterns and operational outliers | TRANSACTIONS | Transaction integrity, operational risk detection | Med / 2–4 wks |
     | 👥 **Advisor Productivity & Coverage** | Improve book management & cadences | ADVISOR_CLIENT_RELATIONSHIPS, INTERACTIONS | Coverage %, last-contact SLA, meetings/client | Low / 1–2 wks |
     | 📅 **Event-Driven Outreach** | Timely, contextual nudge at life/market events | CLIENTS (LIFE_EVENT), MARKET_EVENTS, INTERACTIONS | Engagement rate, booked meetings | Low / 1–2 wks |
     | 💬 **Complaint/Sentiment Intelligence** | Mine notes for issues & intent | INTERACTIONS (OUTCOME_NOTES, LLM_GENERATED_CONTENT) | NPS proxy, time-to-resolution | Low / 1–2 wks |
@@ -1131,7 +1142,7 @@ tabs = st.tabs(
         "⚖️ Suitability Risk",
         "📊 Portfolio Drift",
         "💰 Idle Cash",
-        "🔍 Fee Anomalies",
+        "🔍 Transaction Anomalies",
         "👥 Advisor Coverage",
         "📅 Event Outreach",
         "💬 Sentiment",
@@ -1361,11 +1372,11 @@ with tabs[5]:
         st.info("No cash sweep opportunities identified.")
 
 
-# 🔍 Trade & Fee Anomaly Detection
+# 🔍 Trade & Transaction Anomaly Detection
 with tabs[6]:
-    st.subheader("🔍 Trade & Fee Anomaly Detection")
+    st.subheader("🔍 Trade & Transaction Anomaly Detection")
     st.caption(
-        "Catch leakage/waivers/outliers | KPIs: Fee recovery, false-positive rate"
+        "Catch unusual patterns/outliers | KPIs: Transaction integrity, operational risk detection"
     )
 
     anomalies_df = get_trade_fee_anomalies()
@@ -1376,24 +1387,26 @@ with tabs[6]:
         fig = px.pie(
             values=anomaly_counts.values,
             names=anomaly_counts.index,
-            title="Fee Anomaly Types (Last 90 Days)",
+            title="Transaction Anomaly Types (Last 90 Days)",
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("⚠️ Recent Fee Anomalies")
+        st.subheader("⚠️ Recent Transaction Anomalies")
         st.dataframe(anomalies_df, use_container_width=True)
 
-        # Fee analysis
+        # Transaction analysis
         fig2 = px.scatter(
             anomalies_df,
-            x="TRANSACTION_AMOUNT",
-            y="FEE_AMOUNT",
+            x="TOTAL_AMOUNT",
+            y="DEVIATION_FROM_AVG_PCT",
             color="ANOMALY_TYPE",
-            title="Transaction Amount vs Fee Amount (Anomalies Only)",
+            size="QUANTITY",
+            hover_data=["TICKER", "FIRST_NAME", "LAST_NAME"],
+            title="Transaction Amount vs Deviation from Average (Anomalies Only)",
         )
         st.plotly_chart(fig2, use_container_width=True)
     else:
-        st.success("✅ No fee anomalies detected in the last 90 days.")
+        st.success("✅ No transaction anomalies detected in the last 90 days.")
 
 
 # 👥 Advisor Productivity & Coverage
