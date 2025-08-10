@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install minimal deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install streamlit pandas plotly
+      - name: Basic import check (no Snowflake)
+        run: |
+          python - <<'PY'
+          import importlib
+          for m in ["streamlit", "pandas", "plotly"]:
+              importlib.import_module(m)
+          print("OK")
+          PY
