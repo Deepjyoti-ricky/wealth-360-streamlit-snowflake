@@ -1034,13 +1034,23 @@ def get_client_geographic_distribution() -> pd.DataFrame:
     """Geographic Distribution of Clients - AUM concentration and coverage analysis"""
 
     sql = """
-        WITH client_aum AS (
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        client_aum AS (
             SELECT c.CLIENT_ID, c.FIRST_NAME, c.LAST_NAME, c.CITY, c.STATE, c.ZIP_CODE,
                    c.NET_WORTH_ESTIMATE, c.ANNUAL_INCOME, c.RISK_TOLERANCE,
-                   COALESCE(SUM(p.TOTAL_VALUE), 0) AS PORTFOLIO_VALUE
+                   COALESCE(cpv.TOTAL_PORTFOLIO_VALUE, 0) AS PORTFOLIO_VALUE
             FROM CLIENTS c
-            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
-            GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+            LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
         ),
         state_metrics AS (
             SELECT STATE,
@@ -1052,6 +1062,7 @@ def get_client_geographic_distribution() -> pd.DataFrame:
                    COUNT(CASE WHEN RISK_TOLERANCE = 'Aggressive Growth' THEN 1 END) AS AGGRESSIVE_CLIENTS,
                    COUNT(CASE WHEN RISK_TOLERANCE = 'Conservative' THEN 1 END) AS CONSERVATIVE_CLIENTS
             FROM client_aum
+            WHERE STATE IS NOT NULL
             GROUP BY 1
         )
         SELECT sm.*,
@@ -1073,11 +1084,22 @@ def get_weather_risk_analysis() -> pd.DataFrame:
     """Climate & Weather Risk Analysis - Portfolio exposure to weather-sensitive investments"""
 
     sql = """
-        WITH client_locations AS (
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        client_locations AS (
             SELECT DISTINCT c.STATE, c.CITY, COUNT(DISTINCT c.CLIENT_ID) AS CLIENT_COUNT,
-                   SUM(p.TOTAL_VALUE) AS LOCATION_AUM
+                   COALESCE(SUM(cpv.TOTAL_PORTFOLIO_VALUE), 0) AS LOCATION_AUM
             FROM CLIENTS c
-            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
             WHERE c.STATE IS NOT NULL
             GROUP BY 1, 2
         ),
@@ -1122,14 +1144,25 @@ def get_market_penetration_analysis() -> pd.DataFrame:
     """Market Penetration & Opportunity Analysis using demographic and POI data"""
 
     sql = """
-        WITH zip_metrics AS (
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        zip_metrics AS (
             SELECT c.ZIP_CODE, c.STATE, c.CITY,
                    COUNT(DISTINCT c.CLIENT_ID) AS OUR_CLIENTS,
-                   SUM(p.TOTAL_VALUE) AS OUR_AUM,
+                   COALESCE(SUM(cpv.TOTAL_PORTFOLIO_VALUE), 0) AS OUR_AUM,
                    AVG(c.NET_WORTH_ESTIMATE) AS AVG_NET_WORTH,
                    AVG(c.ANNUAL_INCOME) AS AVG_INCOME
             FROM CLIENTS c
-            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
             WHERE c.ZIP_CODE IS NOT NULL
             GROUP BY 1, 2, 3
         ),
@@ -1168,12 +1201,23 @@ def get_advisor_territory_coverage() -> pd.DataFrame:
     """Advisor Territory Coverage & Geographic Efficiency Analysis"""
 
     sql = """
-        WITH advisor_geography AS (
-            SELECT a.ADVISOR_ID, a.FIRST_NAME || ' ' || a.LAST_NAME AS ADVISOR_NAME,
-                   a.SPECIALIZATION, a.YEARS_EXPERIENCE,
+        WITH client_portfolio_values AS (
+            SELECT p.CLIENT_ID,
+                   SUM(ph.MARKET_VALUE) AS TOTAL_PORTFOLIO_VALUE
+            FROM PORTFOLIOS p
+            JOIN POSITION_HISTORY ph ON p.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            WHERE ph.TIMESTAMP = (
+                SELECT MAX(TIMESTAMP) FROM POSITION_HISTORY ph2
+                WHERE ph2.PORTFOLIO_ID = ph.PORTFOLIO_ID
+            )
+            GROUP BY 1
+        ),
+        advisor_geography AS (
+            SELECT a.ADVISOR_ID, a.NAME AS ADVISOR_NAME,
+                   a.SPECIALIZATION, a.EXPERIENCE_YEARS,
                    c.STATE, c.CITY, c.ZIP_CODE,
                    COUNT(DISTINCT acr.CLIENT_ID) AS CLIENTS_IN_AREA,
-                   SUM(p.TOTAL_VALUE) AS AUM_IN_AREA,
+                   COALESCE(SUM(cpv.TOTAL_PORTFOLIO_VALUE), 0) AS AUM_IN_AREA,
                    -- Simplified distance calculation using state centroids
                    CASE c.STATE
                        WHEN 'CA' THEN 1500 WHEN 'TX' THEN 800 WHEN 'FL' THEN 1200
@@ -1185,7 +1229,7 @@ def get_advisor_territory_coverage() -> pd.DataFrame:
             FROM ADVISORS a
             JOIN ADVISOR_CLIENT_RELATIONSHIPS acr ON a.ADVISOR_ID = acr.ADVISOR_ID
             JOIN CLIENTS c ON acr.CLIENT_ID = c.CLIENT_ID
-            LEFT JOIN PORTFOLIOS p ON c.CLIENT_ID = p.CLIENT_ID
+            LEFT JOIN client_portfolio_values cpv ON c.CLIENT_ID = cpv.CLIENT_ID
             WHERE c.STATE IS NOT NULL
             GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
         ),
